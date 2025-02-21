@@ -1,0 +1,22 @@
+version: '3.7'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: trulogik/matching-service:latest
+    container_name: trulogik-matching-service
+    restart: on-failure
+    entrypoint: /app/entrypoint.sh
+    ports:
+      - "8001:8000"
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 70000
+    deploy:
+      resources:
+        limits:
+          memory: 8g
+          cpus: '3'  # Limit CPU usage to 4 cores
