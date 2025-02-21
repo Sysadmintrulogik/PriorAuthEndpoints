@@ -1,28 +1,15 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
 import os
-import sys
 import json
-import requests
 import re
-
 from azure.storage.blob import BlobServiceClient
-
-from flask import Flask, request, jsonify
-
-app = Flask(__name__)
-
+from flask import Flask, jsonify
+from flask_smorest import Blueprint
 from langchain.chat_models import AzureChatOpenAI
-
 from dotenv import load_dotenv
-import time
 
-env_path = '/opt/conda/envs/indranilenv/.env'
-load_dotenv(env_path)
+edi_json_bp = Blueprint("edi_json", "edi_json", url_prefix="/edi_json")
+
+load_dotenv()
 
 azure_openai_api_endpoint = os.getenv("OPENAI_API_ENDPOINT")
 azure_openai_api_key = os.getenv("azure_openai_api_key")
@@ -194,7 +181,7 @@ def read_edi_from_blob():
     edi_string = blob_content.decode('utf-8')
     return edi_string
     
-@app.route('/convert', methods=['GET', 'POST'])
+@edi_json_bp.route('/convert', methods=['GET', 'POST'])
 def convert_edi_api():
     #edi_file_path = "../edi_files/edi_278.txt" ### azure blob link
     #if not os.path.exists(edi_file_path):
@@ -225,14 +212,3 @@ def convert_edi_api():
         "data": d
     }
     return jsonify(response)
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5002, debug=True)
-    #app_validate.run(host='0.0.0.0', port=5001, debug=True)
-#validate_edi_api()
-
-# In[ ]:
-
-
-
-

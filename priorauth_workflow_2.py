@@ -2,21 +2,18 @@ import random
 import json, re
 #from faker import Faker
 import datetime
-import os, sys
+import os
 import requests
-from collections import Counter
-
-from flask import Flask, request, jsonify
-app = Flask(__name__)
-
+import time
+from flask import jsonify
+from flask_smorest import Blueprint
 from azure.storage.blob import BlobServiceClient
 from langchain.chat_models import AzureChatOpenAI
-
 from dotenv import load_dotenv
-import time
 
-env_path = '/opt/conda/envs/indranilenv/.env'
-load_dotenv(env_path)
+wfo_bp = Blueprint("wfo", "wfo", url_prefix="/wfo")
+
+load_dotenv()
 
 azure_openai_api_endpoint = os.getenv("OPENAI_API_ENDPOINT")
 azure_openai_api_key = os.getenv("azure_openai_api_key")
@@ -516,7 +513,7 @@ def read_edi_from_blob(claim_values):
     edi_string = blob_content.decode('utf-8')
     return edi_string
     
-@app.route('/authentication_flow', methods=['GET', 'POST'])
+@wfo_bp.route('/authentication_flow', methods=['GET', 'POST'])
 def authentication_flow():
     claim_values = load_config("custom_edi.config")
     list_fields_1 = (claim_values["fields_need_to_check"])
@@ -635,7 +632,3 @@ def authentication_flow():
     end_time = time.time()
     print(f"Execution Time: {end_time - start_time:.2f} seconds for Complete Workflow Processing ")
     return jsonify(response)
-    
-#authentication_flow()
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5007, debug=True)

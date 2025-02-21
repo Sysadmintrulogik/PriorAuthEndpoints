@@ -1,14 +1,9 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
-import os, json
-from flask import Flask, request, jsonify
+import json
+from flask import jsonify
 from azure.storage.blob import BlobServiceClient
+from flask_smorest import Blueprint
 
-app = Flask(__name__)
+validate_bp = Blueprint("validate", "validate", url_prefix="/validate")
 
 def validate_edi_278(content):
     """
@@ -93,7 +88,7 @@ def read_edi_from_blob():
     edi_string = blob_content.decode('utf-8')
     return edi_string
     
-@app.route('/validate', methods=['GET'])
+@validate_bp.route('/validate', methods=['GET'])
 def validate_edi_api():
     #file_path = "../edi_files/edi_278.txt"
     #if not os.path.exists(file_path):
@@ -102,17 +97,3 @@ def validate_edi_api():
     is_valid = validate_edi_278(edi_data)
     message = f"EDI file Validity: {is_valid}"
     return jsonify({"message": message})
-
-app_validate = app
-#print(validate_edi_api())
-
-if __name__ == '__main__':
-    app_validate.run(host='0.0.0.0', port=5001, debug=True)
-    app_validate.run(debug=True)
-
-
-# In[ ]:
-
-
-
-
