@@ -646,5 +646,5 @@ if __name__ == "__main__":
         sys.exit(1)
     blob_url = sys.argv[1]
     edi_content = read_edi_from_blob(blob_url)
-    result, status_code = authentication_flow(edi_content)
+    result = authentication_flow(edi_content)
     print(json.dumps(result, indent=2))
