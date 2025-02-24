@@ -21,8 +21,8 @@ load_dotenv(env_path)
 azure_openai_api_endpoint = os.getenv("OPENAI_API_ENDPOINT")
 azure_openai_api_key = os.getenv("azure_openai_api_key")
 
-print(azure_openai_api_key)
-print(azure_openai_api_endpoint)
+#print(azure_openai_api_key)
+#print(azure_openai_api_endpoint)
 
 llm = AzureChatOpenAI(
     deployment_name="Claims-Summary",  
@@ -137,10 +137,7 @@ def generate_edi_278(details, output_file="edi278.txt"):
     return edi_str
 
 def create_edi(sample_input, output_file):
-    #sample_input = claim_values["edi_features"]
-    #output_file = claim_values["output_edi"]
     edi_content = generate_edi_278(sample_input, output_file)
-    #print(edi_content)
     return edi_content
 
 def validate_edi_278(content):
@@ -186,12 +183,6 @@ def validate_edi_278(content):
     return True
 
 def parse_edi_file(edi_content, output_file):
-   # if os.path.exists(edi_input):
-    #    with open(edi_input, "r") as f:
-      #      edi_text = f.read()
-  #  else:
-     #   edi_text = edi_input
-
     edi_text = edi_content.strip()
     segments = [seg.strip() for seg in edi_text.split("~") if seg.strip()]
     parsed_segments = []
@@ -398,7 +389,7 @@ def fetch_provider_score(provider_features, providers_db):
 
 def validate_provider_api(provider_features, providers_db):
     result = fetch_provider_score(provider_features, providers_db)
-    text = ""
+    text = "Provider Validation Result"
     if result and result[0]['SCORE']:
         score = ((result[0])['SCORE']['Final_Score'])
         score1 = str(result[0]['SCORE'])    
@@ -406,7 +397,7 @@ def validate_provider_api(provider_features, providers_db):
             "message": text,
             "data": score1
         }
-        if (score)>85:
+        if int(score)>=85:
             text = "Provider Validated"
             return (response, True)
         else:
@@ -445,7 +436,7 @@ def fetch_member_score(member_features, members_db):
 
 def validate_member_api(member_features, members_db):
     result = fetch_member_score(member_features, members_db) 
-    text = ""
+    text = "Member Validation Result"
     if result and result[0]['SCORE']:
         score = ((result[0])['SCORE']['Final_Score'])
         print("Score obtained = ", score)
@@ -454,7 +445,7 @@ def validate_member_api(member_features, members_db):
             "message": text,
             "data": score1
         }
-        if (score)>85:
+        if int(score)>=65:
             text = "Member Validated"
             return (response, True)
         else:
@@ -514,7 +505,7 @@ def read_edi_from_blob(blob_url):
     blob_data = blob_client.download_blob().readall()
     return blob_data.decode('utf-8')
     
-@app.route('/authentication_flow', methods=['GET'])
+@app.route('/authentication_flow', methods=['GET', 'POST'])
 def authentication_flow():
     claim_values = load_config("custom_edi.config")
     blob_url = request.args.get("blob_url")
@@ -542,8 +533,6 @@ def authentication_flow():
     list_text = list()
     list_message = list()
     start_time = time.time()
-    #edi_content = create_edi(sample_input, output_file)
-    #print(edi_content)
     edi_content = read_edi_from_blob(blob_url)
     #print(edi_content)
     flag = False
@@ -554,8 +543,9 @@ def authentication_flow():
         list_message.append("No Further Prior Authorization ......")
         flag = True
         response = {
-        "message": "Fail",
-        "data": {}}
+        "message": "EDI Validation Failure",
+        "data": {},
+        "status":"fail"}
         return jsonify(response)
     else:
         print("EDI Validity = ", edi_validity)
@@ -568,6 +558,12 @@ def authentication_flow():
         #parsed = parse_edi_file(edi_file_path, json_output_path) 
         parsed = parse_edi_file(edi_content, json_output_path)
         extracted_json = extract_edi_fields(parsed)
+        if not list(extracted_json.keys()):
+            response = {
+                    "message": "Fail due to No Extraction",
+                    "data": {},
+                    "status":"fail"}
+            return jsonify(response)
         list_fields_2 = list(extracted_json.keys())
         print("List Match are ",list_fields_1)
         print("List Match are ",list_fields_2)
@@ -578,6 +574,11 @@ def authentication_flow():
             list_text.append("Extraction Validation Failed ..........")
             list_message.append("No Further Prior Authorization ......")
             flag = True
+            response = {
+                    "message": "Fail due to Invalid or Incomplete Extraction",
+                    "data": {"member":{}, "provider":{}},
+                    "status":"fail"}
+            return jsonify(response)
         else:
             print("Extraction Validity = ", valid_extraction)
             list_text.append("Extraction Validation Done")
@@ -590,8 +591,9 @@ def authentication_flow():
                 print("Provider or Member are not Extracted")
                 flag = True
                 response = {
-                    "message": "Fail due to failed Extraction",
-                    "data": {"member":extracted_json["member"], "provider":extracted_json["provider"]}}
+                    "message": "Fail due to Member or Provider details not extracted",
+                    "data": {"member":extracted_json["member"], "provider":extracted_json["provider"]},
+                    "status":"fail"}
                 return jsonify(response)
             else:
                 provider_features = extract_provider_details(extracted_json)
@@ -608,8 +610,9 @@ def authentication_flow():
                     list_message.append("No Further Prior Authorization ......")
                     flag = True
                     response = {
-                    "message": "Provider Validation Failed",
-                    "data": {"member":member_features, "provider":provider_features}}
+                        "message": "Provider Validation Failed",
+                        "data": {"member":member_features, "provider":valid_provider[0]},
+                        "status":"fail"}
                     return jsonify(response)
                 else:
                     list_text.append(str(provider_features))
@@ -623,7 +626,8 @@ def authentication_flow():
                     flag = True
                     response = {
                         "message": "Member Validation Failed",
-                        "data": {"member":member_features, "provider":provider_features}}
+                        "data": {"member":valid_member[0], "provider":provider_features},
+                        "status":"fail"}
                     return jsonify(response)
                 else:
                     s = str(member_features)
@@ -639,7 +643,8 @@ def authentication_flow():
                         list_message.append("No Further Prior Authorization ......")
                         response = {
                             "message": "Eligibity Validation Failed",
-                            "data": {"member":member_features, "provider":provider_features}}
+                            "data": {"member":valid_member[0], "provider":valid_provider[0]},
+                            "status":"fail"}
                         return jsonify(response)
                     else:
                         list_text.append("Eligibility Validation Done")
@@ -651,7 +656,8 @@ def authentication_flow():
                         list_message.append("No Further Prior Authorization ......")
                         response = {
                             "message": "Basic Auth Validation Failed",
-                            "data": {"member":member_features, "provider":provider_features}}
+                            "data": {"member":valid_member[0], "provider":valid_provider[0]},
+                            "status":"fail"}
                         return jsonify(response)
                     else:
                         list_text.append("Basic Prior Auth Match Done")
@@ -660,7 +666,8 @@ def authentication_flow():
         
     response = {
             "message": "All Validation Passed",
-            "data": {"member":member_features, "provider":provider_features}}
+            "data": {"member":valid_member[0], "provider":valid_provider[0]},
+            "status":"pass"}
     end_time = time.time()
     print(f"Execution Time: {end_time - start_time:.2f} seconds for Complete Workflow Processing ")
     return jsonify(response)
