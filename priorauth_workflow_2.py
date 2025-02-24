@@ -10,25 +10,19 @@ from flask import Flask, request, jsonify
 app = Flask(__name__)
 
 from azure.storage.blob import BlobServiceClient
-from langchain_openai import AzureChatOpenAI
+from langchain.chat_models import AzureChatOpenAI
+
 from dotenv import load_dotenv
 import time
-
-#env_path = '/Users/shubhamraj/Documents/Trulogik_Work/PriorAuthEndpoints/PriorAuthEndpoints-main/.env'
-#load_dotenv(env_path)
 
 env_path = '/opt/conda/envs/indranilenv/.env'
 load_dotenv(env_path)
 
-azure_openai_api_key = os.getenv("azure_openai_api_key")
 azure_openai_api_endpoint = os.getenv("OPENAI_API_ENDPOINT")
+azure_openai_api_key = os.getenv("azure_openai_api_key")
 
-# Debugging print statements
-if not azure_openai_api_key or not azure_openai_api_endpoint:
-    raise ValueError("Azure OpenAI API key or endpoint is missing. Check your .env file.")
-
-print("Azure OpenAI API Key:", azure_openai_api_key)
-print("Azure OpenAI API Endpoint:", azure_openai_api_endpoint)
+print(azure_openai_api_key)
+print(azure_openai_api_endpoint)
 
 llm = AzureChatOpenAI(
     deployment_name="Claims-Summary",  
@@ -42,7 +36,7 @@ llm = AzureChatOpenAI(
 def load_config(file_path):
     with open(file_path, 'r') as file:
         return json.load(file)
-        
+
 claim_values = load_config("custom_edi.config")
 
 def generate_edi_278(details, output_file="edi278.txt"):
@@ -340,17 +334,16 @@ def extract_provider_details(extracted_json):
     ]
     ai_msg = llm.invoke(messages)
     response = ai_msg.content
-    #print("Response 1 = ", response, " ", type(response))
+    print("Response 1 = ", response, " ", type(response))
     response = response.replace('json','').replace("```","")
     res = (m := re.search(r'({.*})', response, re.DOTALL)) and m.group(1)
-    #print("Response 2 = ", res)
+    print("Response 2 = ", res)
     provider_features = json.loads(res)
     return provider_features
     
 def extract_member_details(extracted_json):
     system_message = "You are a helpful assistant that extract healthcare member related features from a Healthcare Claim inputted as JSON"
     member_details = extracted_json.get("member", [])
-    print(member_details)
     prompt = f"""You are given member details extracted from an EDI file as a list:
     {member_details}
     Extract the following information:
@@ -451,24 +444,21 @@ def fetch_member_score(member_features, members_db):
             return None
 
 def validate_member_api(member_features, members_db):
-    result = fetch_member_score(member_features, members_db)
-    #print("Member Details : ")
-    #print(member_features)
+    result = fetch_member_score(member_features, members_db) 
     text = ""
     if result and result[0]['SCORE']:
         score = ((result[0])['SCORE']['Final_Score'])
+        print("Score obtained = ", score)
         score1 = str(result[0]['SCORE'])    
         response = {
             "message": text,
             "data": score1
         }
-        if (score)>45:
+        if (score)>85:
             text = "Member Validated"
-            print(text)
             return (response, True)
         else:
             text = "Member Not Validated due to Less Score"
-            print(text)
             return (response, False)
     else:
         print("Invalid Member ID because Member Not Present")
@@ -481,7 +471,7 @@ def validate_eligibility(eligibility_features):
     #print("eligibility = ",elig, type(elig))
     if elig in ["yes", "true", "valid"]:
         today = datetime.datetime.today()
-        print("Today's Date for Eligibility = ", today)
+        print("Today's Date = ", today)
         start = datetime.datetime.strptime(eligibility_features["start_date"], "%m-%d-%Y")
         end = datetime.datetime.strptime(eligibility_features["end_date"], "%m-%d-%Y")
         if start <= today <= end:
@@ -496,7 +486,7 @@ def validate_auth(auth_basics):
     #print("eligibility = ",elig, type(elig))
     if elig in ["approved", "true", "valid"]:
         today = datetime.datetime.today()
-        print("Today's Date for Basic Auth Validation = ", today)
+        print("Today's Date = ", today)
         start = datetime.datetime.strptime(auth_basics["auth_date"], "%m-%d-%Y")
         end = datetime.datetime.strptime(auth_basics["auth_expiry_date"], "%m-%d-%Y")
         if start <= today <= end:
@@ -523,128 +513,158 @@ def read_edi_from_blob(blob_url):
     
     blob_data = blob_client.download_blob().readall()
     return blob_data.decode('utf-8')
-
-def authentication_flow(edi_content):
-    claim_values = load_config("./custom_edi.config")
-    list_fields_1 = claim_values.get("fields_need_to_check", [])
-
-    list_text = []
-    list_message = []
-    start_time = time.time()
-
-    print("Fetching EDI file from Blob Storage...")
-    #edi_content = read_edi_from_blob(claim_values)
-
-    # Handle missing EDI file
-    if edi_content is None:
-        print("EDI file could not be fetched. Exiting authentication flow.")
-        return {"error": "EDI file not found in blob storage"}, 400
-
-    print("EDI file successfully fetched.")
-
-    flag = False
-    edi_validity = validate_edi_278(edi_content)
-
-    if not edi_validity:
-        print("EDI Validation Failed.")
-        return {"error": "EDI Validation Failed"}, 400
-
-    print("EDI Validation Passed.")
-    list_text.append("EDI Validation Done")
-    list_message.append("Proceeding after EDI Validation")
-
-    json_output_path = claim_values.get("output_extracted_json", "output.json")
-    parsed = parse_edi_file(edi_content, json_output_path)
-    extracted_json = extract_edi_fields(parsed)
-
-    # Validate extracted fields
-    list_fields_2 = list(extracted_json.keys())
-    print(f"Required Fields: {list_fields_1}")
-    print(f" Extracted Fields: {list_fields_2}")
-
-    if not all(x in list_fields_2 for x in list_fields_1):
-        print("Extraction Validation Failed.")
-        return {"error": "Extraction Validation Failed"}, 400
-
-    print("Extraction Validation Passed.")
-    list_text.append("Extraction Validation Done")
-    list_message.append("Proceeding after Extraction Validation")
-
-    # Ensure extracted JSON contains provider & member details
-    if not extracted_json.get("provider") or not extracted_json.get("member"):
-        print("Provider or Member information is missing in the extracted data.")
-        return {"error": "Provider or Member details missing"}, 400
-
-    print("Provider and Member information found.")
-
-    # Extract provider & member features
-    provider_features = extract_provider_details(extracted_json)
-    member_features = extract_member_details(extracted_json)
     
-    #print(" Extracted Provider Features:", provider_features)
-    #print(" Extracted Member Features:", member_features)
+@app.route('/authentication_flow', methods=['GET'])
+def authentication_flow():
+    claim_values = load_config("custom_edi.config")
+    blob_url = request.args.get("blob_url")
+    #print("Request = ", blob_url)
+    if not blob_url:
+        return jsonify({"error": "blob_url is required"}), 400
 
-    # Validate provider
-    providers_db = claim_values.get("providers_db")
-    valid_provider = validate_provider_api(provider_features, providers_db)
-
-    if not valid_provider[1]:  # Corrected boolean check
-        print("Provider Validation Failed.")
-        return {"error": "Provider Validation Failed"}, 400
-
-    print("Provider Validation Passed.")
-    list_text.append("Provider Validation Done")
-    list_message.append("Proceeding after Provider Validation")
-
-    # Validate member
-    members_db = claim_values.get("members_db")
-    valid_member = validate_member_api(member_features, members_db)
-
-    if not valid_member[1]:  # Corrected boolean check
-        print("Member Validation Failed.")
-        return {"error": "Member Validation Failed"}, 400
-
-    print("Member Validation Passed.")
-    list_text.append("Member Validation Done")
-    list_message.append("Proceeding after Member Validation")
-
-    # Validate eligibility
-    eligibility_features = extracted_json.get("eligibility", {})
-    if not validate_eligibility(eligibility_features):
-        print("Eligibility Validation Failed.")
-        return {"error": "Eligibility Validation Failed"}, 400
-
-    print("Eligibility Validation Passed.")
-    list_text.append("Eligibility Validation Done")
-    list_message.append("Proceeding After Eligibility Validation")
-
-    # Validate prior authorization
-    auth_basics = extracted_json.get("basic_auth", {})
-    print("Auth Details : ")
-    print(auth_basics)
-    if not validate_auth(auth_basics):
-        print("Prior Authorization Validation Failed.")
-        return {"error": "Prior Authorization Validation Failed"}, 400
-
-    print("Prior Authorization Validation Passed.")
-    list_text.append("Prior Authorization Validation Done")
-    list_message.append("Closing the Loop post Basic Prior Auth Validation")
-
-    response = {
-        "message": list_text,
-        "data": list_message
-    }
+    print(f"Processing EDI from Blob URL: {blob_url}")
     
-    end_time = time.time()
-    print(f"Execution Time: {end_time - start_time:.2f} seconds")
-    
-    return response
-
-if __name__ == "__main__":
+    list_fields_1 = (claim_values["fields_need_to_check"])
+    """
     if len(sys.argv) < 2:
         print(json.dumps({"error": "Blob URL required"}))
         sys.exit(1)
     blob_url = sys.argv[1]
+    
+    sample_input = claim_values["edi_features"]
+    list_text = list()
+    list_message = list()
+    print("Features Present in the Input EDI ....... ")
+    print(list(sample_input.keys()))
+    output_file = claim_values["output_edi"]
+    """
+    
+    list_text = list()
+    list_message = list()
+    start_time = time.time()
+    #edi_content = create_edi(sample_input, output_file)
+    #print(edi_content)
     edi_content = read_edi_from_blob(blob_url)
-    result = authentication_flow(edi_content)
-    print(json.dumps(result, indent=2))
+    #print(edi_content)
+    flag = False
+    edi_validity = validate_edi_278(edi_content)
+    if edi_validity == False:
+        print("EDI Validation Failed .......... ")
+        list_text.append("EDI Validation Failed ..........")
+        list_message.append("No Further Prior Authorization ......")
+        flag = True
+        response = {
+        "message": "Fail",
+        "data": {}}
+        return jsonify(response)
+    else:
+        print("EDI Validity = ", edi_validity)
+        list_text.append("EDI Validation Done")
+        list_message.append("Proceeding after EDI Validation .....")
+    #json_segments = edi_to_json(edi_content)
+    if flag == False:
+        #edi_file_path = claim_values["output_edi"]
+        json_output_path = claim_values["output_extracted_json"]
+        #parsed = parse_edi_file(edi_file_path, json_output_path) 
+        parsed = parse_edi_file(edi_content, json_output_path)
+        extracted_json = extract_edi_fields(parsed)
+        list_fields_2 = list(extracted_json.keys())
+        print("List Match are ",list_fields_1)
+        print("List Match are ",list_fields_2)
+        valid_extraction = (all(x in list_fields_2 for x in list_fields_1))
+        print("All Fields Extraction Validation = ",valid_extraction)
+        if valid_extraction==False:
+            print("Extraction Validation Failed .......... ")
+            list_text.append("Extraction Validation Failed ..........")
+            list_message.append("No Further Prior Authorization ......")
+            flag = True
+        else:
+            print("Extraction Validity = ", valid_extraction)
+            list_text.append("Extraction Validation Done")
+            list_message.append("Proceeding after Extraction Validation .....")
+        if flag == False:
+            x1 = (bool(extracted_json["provider"]))
+            x2 = (bool(extracted_json["member"]))
+            print("Keys in extracted_json = ", (list(extracted_json.keys())))
+            if x1 == False or x2 == False:
+                print("Provider or Member are not Extracted")
+                flag = True
+                response = {
+                    "message": "Fail due to failed Extraction",
+                    "data": {"member":extracted_json["member"], "provider":extracted_json["provider"]}}
+                return jsonify(response)
+            else:
+                provider_features = extract_provider_details(extracted_json)
+                member_features = extract_member_details(extracted_json)
+                print(provider_features)
+                print(member_features)
+                providers_db = claim_values["providers_db"]
+                members_db = claim_values["members_db"]
+                valid_provider = validate_provider_api(provider_features, providers_db)
+                print(valid_provider)
+                if(valid_provider[1] == "False"):
+                    print("Authentication not approved because of Provider Validation Fail")
+                    list_text.append("Authentication not approved because of Provider Validation Fail")
+                    list_message.append("No Further Prior Authorization ......")
+                    flag = True
+                    response = {
+                    "message": "Provider Validation Failed",
+                    "data": {"member":member_features, "provider":provider_features}}
+                    return jsonify(response)
+                else:
+                    list_text.append(str(provider_features))
+                    list_message.append("Proceeding after Provider Validation .....")
+                valid_member = validate_member_api(member_features, members_db)
+                print(valid_member)
+                if(valid_member[1] == "False"):
+                    print("Authentication not approved because of Member Validation Fail")
+                    list_text.append("Authentication not approved because of Member Validation Fail")
+                    list_message.append("No Further Prior Authorization ......")
+                    flag = True
+                    response = {
+                        "message": "Member Validation Failed",
+                        "data": {"member":member_features, "provider":provider_features}}
+                    return jsonify(response)
+                else:
+                    s = str(member_features)
+                    s = s.replace("\\","")
+                    list_text.append(s)
+                    list_message.append("Proceeding after Member Validation .....")
+                if flag == False:
+                    eligibility_features = extracted_json["eligibility"]
+                    valid = validate_eligibility(eligibility_features)
+                    print("Validation for Eligibility = ",valid)
+                    if valid=="False":
+                        list_text.append("Authentication not approved because of Eligibility Fail")
+                        list_message.append("No Further Prior Authorization ......")
+                        response = {
+                            "message": "Eligibity Validation Failed",
+                            "data": {"member":member_features, "provider":provider_features}}
+                        return jsonify(response)
+                    else:
+                        list_text.append("Eligibility Validation Done")
+                        list_message.append("Proceeding After Eligibility Validation .....")
+                    auth_basics = extracted_json["basic_auth"]
+                    valid = validate_auth(auth_basics)
+                    if valid=="False":
+                        list_text.append("Authentication not approved because of Basic Prior Auth doesn't match")
+                        list_message.append("No Further Prior Authorization ......")
+                        response = {
+                            "message": "Basic Auth Validation Failed",
+                            "data": {"member":member_features, "provider":provider_features}}
+                        return jsonify(response)
+                    else:
+                        list_text.append("Basic Prior Auth Match Done")
+                        list_message.append("Closing the Loop post Basic Prior Auth Validation .....")
+                    print("Validation for Authentication Basics = ",valid)
+        
+    response = {
+            "message": "All Validation Passed",
+            "data": {"member":member_features, "provider":provider_features}}
+    end_time = time.time()
+    print(f"Execution Time: {end_time - start_time:.2f} seconds for Complete Workflow Processing ")
+    return jsonify(response)
+    
+#authentication_flow()
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5007, debug=True)
