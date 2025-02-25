@@ -142,7 +142,7 @@ def create_edi():
         
     json_object = read_edi_from_blob(blob_url)
     obj = json.loads(json_object)
-    #print(obj)
+    print(obj)
     edi_content = generate_edi_278(obj)
     print("Generated EDI 278 File:")
     print(edi_content)
