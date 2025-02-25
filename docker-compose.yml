@@ -10,7 +10,7 @@ services:
     restart: on-failure
     entrypoint: /app/entrypoint.sh
     ports:
-      - "8002:8000"
+      - "8003:8000"
     ulimits:
       nofile:
         soft: 65536
