@@ -6,7 +6,8 @@ import os, sys
 import re
 import requests
 from collections import Counter
-from flask import Flask, request, jsonify, Blueprint
+from flask import Flask, request, jsonify
+from flask_smorest import Blueprint
 from azure.storage.blob import BlobServiceClient
 from langchain.chat_models import AzureChatOpenAI
 from dotenv import load_dotenv
