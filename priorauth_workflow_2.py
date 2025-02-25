@@ -8,7 +8,7 @@ import time
 from flask import jsonify
 from flask_smorest import Blueprint
 from azure.storage.blob import BlobServiceClient
-from langchain.chat_models import AzureChatOpenAI
+from langchain_openai import AzureChatOpenAI
 from dotenv import load_dotenv
 
 wfo_bp = Blueprint("wfo", "wfo", url_prefix="/wfo")
