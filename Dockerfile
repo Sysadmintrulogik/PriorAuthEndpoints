@@ -37,7 +37,7 @@ WORKDIR /app
 COPY . .
 
 # Copy the configuration file as is
-COPY custom_edi.config /app/custom_edi.config
+COPY custom_edi.config /app/config_for_edi.config
 
 RUN chmod +x entrypoint.sh
 
