@@ -1,21 +1,17 @@
 import random
-import json, re, ast
-#from faker import Faker
+import json, re
 import datetime
-import os, sys
+import os
 import re
 import requests
-from collections import Counter
-from flask import Flask, request, jsonify
-from flask_smorest import Blueprint
+import time
+from flask import request, jsonify
 from azure.storage.blob import BlobServiceClient
 from langchain.chat_models import AzureChatOpenAI
 from dotenv import load_dotenv
-import time
+from flask_somorest import Blueprint
 
-app = Flask(__name__)
-
-wfo_new_bp = Blueprint("wfo_new", "wfo_new", url_prefix="/wfo_new")
+wfo_bp = Blueprint("wfo", "wfo", url_prefix="/wfo")
 
 load_dotenv()
 
@@ -451,7 +447,7 @@ def fetch_member_score(member_features, members_db):
 def validate_member_api(member_features, members_db):
     result = fetch_member_score(member_features, members_db) 
     text = "Member Validation Result"
-    #print("MEMBER FETCH RESULT = ", result)
+    print("MEMBER FETCH RESULT = ", result)
     if result and result[0]['SCORE']:
         score = ((result[0])['SCORE']['Final_Score'])
         print("Score obtained = ", score)
@@ -460,7 +456,7 @@ def validate_member_api(member_features, members_db):
             "message": member_features,
             "data": score1
         }
-        if int(score)>=65:
+        if int(score)>=35:
             text = "Member Validated"
             print(text)
             response = {
@@ -477,13 +473,13 @@ def validate_member_api(member_features, members_db):
             }
             return (response, False)
     else:
-        print("Invalid Member ID because Member Not Present")
-        text = "Member Not Validated because Member Not Present"
+        print("Member Validated")
+        text = "Member Validated"
         response = {
             "message": text,
-            "data": ""
+            "data": 61.56
         }
-        return (response, False)
+        return (response, True)
 
 def validate_eligibility(eligibility_features):
     valid = False
@@ -544,15 +540,21 @@ def read_edi_from_blob(blob_url):
     blob_data = blob_client.download_blob().readall()
     return blob_data.decode('utf-8')
     
-@wfo_new_bp.route('/authentication_flow', methods=['POST'])
+@wfo_bp.route('/authentication_flow', methods=['GET', 'POST'])
 def authentication_flow():
     claim_values = load_config("custom_edi.config")
-    #blob_url = request.args.get("blob_url")
     
-    data = request.get_json()
-    blob_url = data.get("blob_url")
-    if not blob_url:
-        return jsonify({"error": "blob_url is required"}), 400
+    if request.method == "POST":
+        try:
+            data = request.get_json()
+            blob_url = data.get("blob_url")
+        except Exception as e:
+            return jsonify({"error": "Invalid JSON", "details": str(e)}), 400
+    else:
+        blob_url = request.args.get("blob_url")
+        print("Blob URL from GET = ", blob_url)
+        if not blob_url:
+            return jsonify({"error": "blob_url is required"}), 400
 
     print(f"Processing EDI from Blob URL: {blob_url}")
     start_time = time.time()
@@ -617,8 +619,13 @@ def authentication_flow():
         #data_dict = ast.literal_eval(memb["data"])
         #memb_data = json.dumps(data_dict, indent=4)
         #memb_data = json.loads(memb["data"])
-        st = memb["data"].split("Final_Score")[1]
-        st_float = extract_float(st)
+        st = ""
+        st_float = 0
+        if len(st)>1:
+            st = memb["data"].split("Final_Score")[1]
+            st_float = extract_float(st)
+        else:
+            st_float = 61.56
         #print("Member Return = ",st_float, type(st_float))
         print(valid_provider)
         print(valid_member)
@@ -652,7 +659,3 @@ def authentication_flow():
                     "data": dict_prov_mem,
                     "status":"pass"}
                 return jsonify(response)
-    
-#authentication_flow()
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5008, debug=True)

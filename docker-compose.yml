@@ -18,5 +18,4 @@ services:
     deploy:
       resources:
         limits:
-          memory: 8g
-          cpus: '3'  # Limit CPU usage to 4 cores
+          memory: 4g
