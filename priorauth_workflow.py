@@ -9,7 +9,7 @@ from flask import request, jsonify
 from azure.storage.blob import BlobServiceClient
 from langchain.chat_models import AzureChatOpenAI
 from dotenv import load_dotenv
-from flask_somorest import Blueprint
+from flask_smorest import Blueprint
 
 wfo_bp = Blueprint("wfo", "wfo", url_prefix="/wfo")
 
