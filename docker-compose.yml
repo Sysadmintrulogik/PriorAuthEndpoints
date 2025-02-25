@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
     image: trulogik/priorauthendpoints:latest
-    container_name: trulogik-prior-auth-endpoints-revamp/app
+    container_name: trulogik-prior-auth-endpoints-revamp-app
     restart: on-failure
     entrypoint: /app/entrypoint.sh
     ports:
