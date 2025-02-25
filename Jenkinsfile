@@ -1,5 +1,5 @@
 pipeline {
-    agent { label 'postgresqlagent' }
+    agent { label 'GPUmaster' }
 
     environment {
         VAULT_URL = 'http://172.210.25.139:8200'
