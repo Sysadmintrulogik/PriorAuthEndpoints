@@ -39,8 +39,8 @@ COPY . .
 RUN chmod +x entrypoint.sh
 
 # Install Python dependencies
-RUN pip install -r requirements.txt \
-    && pip install --upgrade pip setuptools wheel
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir --upgrade pip setuptools wheel
  
 # Define the command to run the application using Gunicorn
 CMD ["sh", "/app/entrypoint.sh"]
