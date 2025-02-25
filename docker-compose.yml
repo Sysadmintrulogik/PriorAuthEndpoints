@@ -5,12 +5,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: trulogik/matching-service:latest
-    container_name: trulogik-matching-service
+    image: trulogik/priorAuthEndpoints:latest
+    container_name: trulogik-priorAuthEndpoints-revamp/app
     restart: on-failure
     entrypoint: /app/entrypoint.sh
     ports:
-      - "8001:8000"
+      - "8002:8000"
     ulimits:
       nofile:
         soft: 65536
