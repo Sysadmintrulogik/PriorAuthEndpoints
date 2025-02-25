@@ -17,6 +17,8 @@ FROM python:3.10-slim
 
 COPY --from=builder /install /usr/local
 
+RUN pip install -U langchain-community
+
 WORKDIR /app
 
 COPY . .
