@@ -6,12 +6,13 @@ import os, sys
 import re
 import requests
 from collections import Counter
-from flask import Flask, request, jsonify
-app = Flask(__name__)
+from flask import Flask, request, jsonify, Blueprint
 from azure.storage.blob import BlobServiceClient
 from langchain.chat_models import AzureChatOpenAI
 from dotenv import load_dotenv
 import time
+
+app = Flask(__name__)
 
 wfo_new_bp = Blueprint("wfo_new", "wfo_new", url_prefix="/wfo_new")
 
