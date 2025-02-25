@@ -6,7 +6,7 @@ pipeline {
     }
 
     parameters {
-        string(name: 'BRANCH_NAME', defaultValue: 'main', description: 'Branch to build')
+        string(name: 'BRANCH_NAME', defaultValue: 'revamp/app', description: 'Branch to build')
     }
 
     stages{
@@ -18,7 +18,7 @@ pipeline {
                     checkout([$class: 'GitSCM',
                         branches: [[name: "*/${params.BRANCH_NAME}"]],
                         userRemoteConfigs: [[
-                            url: 'https://github.com/Sysadmintrulogik/matching_service.git',
+                            url: 'https://github.com/Sysadmintrulogik/PriorAuthEndpoints.git',
                             credentialsId: 'd3924fd8-5a0b-4583-89d3-3f0b560104ed'
                         ]]
                     ])
