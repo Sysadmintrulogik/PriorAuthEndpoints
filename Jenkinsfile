@@ -105,16 +105,23 @@ pipeline {
                         set -e
                         whoami
                         docker compose build
-                        docker compose down --remove-orphans
                     '''
 
-                    // try {
-                    //     sh '''
-                    //         docker container stop trulogik-prior-auth-endpoints-revamp-app
-                    //     '''
-                    // } catch (Exception e) {
-                    //     echo "Error during container stop: ${e.message}"
-                    // }
+                    try {
+                        sh '''
+                            docker compose down --remove-orphans
+                        '''
+                    } catch (Exception e) {
+                        echo "Error during container down: ${e.message}"
+                    }
+
+                    try {
+                        sh '''
+                            docker container stop trulogik-prior-auth-endpoints-revamp-app
+                        '''
+                    } catch (Exception e) {
+                        echo "Error during container stop: ${e.message}"
+                    }
 
                     try {
                         sh '''
