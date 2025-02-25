@@ -139,7 +139,7 @@ def create_edi():
         print("Blob URL from GET = ", blob_url)
         if not blob_url:
             return jsonify({"error": "blob_url is required"}), 400
-        
+    print("Blob URL = ", blob_url)
     json_object = read_edi_from_blob(blob_url)
     obj = json.loads(json_object)
     print(obj)
