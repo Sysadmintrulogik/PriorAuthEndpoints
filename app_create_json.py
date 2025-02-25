@@ -157,7 +157,7 @@ def load_config(file_path):
     with open(file_path, 'r') as file:
         return json.load(file)
 
-config_for_edi = load_config("custom_edi.config")
+config_for_edi = load_config("config_for_edi.config")
 
 def read_edi_from_blob():
     # Create a BlobServiceClient using the connection string
