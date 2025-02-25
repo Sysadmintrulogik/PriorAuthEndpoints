@@ -4,7 +4,7 @@ import re
 from azure.storage.blob import BlobServiceClient
 from flask import Flask, jsonify
 from flask_smorest import Blueprint
-from langchain.chat_models import AzureChatOpenAI
+from langchain_community.chat_models import AzureChatOpenAI
 from dotenv import load_dotenv
 
 edi_json_bp = Blueprint("edi_json", "edi_json", url_prefix="/edi_json")
