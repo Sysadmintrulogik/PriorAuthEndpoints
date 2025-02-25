@@ -33,6 +33,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy the requirements file into the container
+WORKDIR /app
 COPY . .
 
 RUN chmod +x entrypoint.sh
@@ -42,4 +43,5 @@ RUN pip install -r requirements.txt \
     && pip install --upgrade pip setuptools wheel
  
 # Define the command to run the application using Gunicorn
-CMD ["tail", "-f", "/dev/null"]
+CMD ["sh", "/app/entrypoint.sh"]
+
