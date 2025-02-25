@@ -36,6 +36,9 @@ RUN apt-get update && \
 WORKDIR /app
 COPY . .
 
+# Copy the configuration file as is
+COPY custom_edi.config /app/custom_edi.config
+
 RUN chmod +x entrypoint.sh
 
 # Install Python dependencies
