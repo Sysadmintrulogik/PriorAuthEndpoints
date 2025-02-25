@@ -6,18 +6,16 @@ import os, sys
 import re
 import requests
 from collections import Counter
-
 from flask import Flask, request, jsonify
 app = Flask(__name__)
-
 from azure.storage.blob import BlobServiceClient
 from langchain.chat_models import AzureChatOpenAI
-
 from dotenv import load_dotenv
 import time
 
-env_path = '/opt/conda/envs/indranilenv/.env'
-load_dotenv(env_path)
+wfo_new_bp = Blueprint("wfo_new", "wfo_new", url_prefix="/wfo_new")
+
+load_dotenv()
 
 azure_openai_api_endpoint = os.getenv("OPENAI_API_ENDPOINT")
 azure_openai_api_key = os.getenv("azure_openai_api_key")
@@ -544,7 +542,7 @@ def read_edi_from_blob(blob_url):
     blob_data = blob_client.download_blob().readall()
     return blob_data.decode('utf-8')
     
-@app.route('/authentication_flow', methods=['POST'])
+@wfo_new_bp.route('/authentication_flow', methods=['POST'])
 def authentication_flow():
     claim_values = load_config("custom_edi.config")
     #blob_url = request.args.get("blob_url")
