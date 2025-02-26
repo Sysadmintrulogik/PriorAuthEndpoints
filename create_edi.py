@@ -69,22 +69,7 @@ def generate_edi_278_new(json_obj):
     
     # --- Receiver Information ---
     segments.append(f'NM1*40*2*{json_obj["receiver"]}****46*{json_obj["receiver"][:10]}' + '~')
-    
-    # --- Eligibility Information (using EB instead of ELG) ---
-    eligibility = json_obj['eligibility']
-    segments.append(
-        f'EB*{eligibility["is_eligible"]}*{eligibility["start_date"]}*{eligibility["end_date"]}*{eligibility["group_no"]}*{eligibility["subscriber_dob"]}' + '~'
-    )
-    
-    # --- Policy Benefits Header ---
-    # PB segment: includes PolicyName and Coverage from policy_benefits.
-    policy = json_obj['policy_benefits']
-    segments.append(f'PB*{policy["PolicyName"]}*{policy["Coverage"]}' + '~')
-    
-    # --- Policy Benefit Details ---
-    for benefit in policy['details']:
-        segments.append(f'BEN*{benefit["type"]}*{benefit["description"]}' + '~')
-    
+
     # --- ICD Codes ---
     for icd in json_obj['icd_codes']:
         segments.append(f'ICD*{icd}' + '~')
