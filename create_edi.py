@@ -122,10 +122,11 @@ def read_edi_from_blob(blob_url):
 @edi_bp.route('/create_edi', methods=['GET', 'POST'])
 def create_edi():
     claim_values = load_config("custom_edi.config")
-    
+
     if request.method == "POST":
         try:
             data = request.get_json()
+            print(data)
             blob_url = data.get("blob_url")
             member_id = data.get("member_id")
             print("Blob URL = ", blob_url)
