@@ -108,14 +108,18 @@ def read_edi_from_blob(blob_url):
 def create_edi():
     claim_values = load_config("custom_edi.config")
 
+    edi_content = ""
     if request.method == "POST":
         try:
             data = request.get_json()
-            print(data)
-            blob_url = data.get("blob_url")
-            member = data.get("member")
-            print("Blob URL = ", blob_url)
-            print("Member  = ", member)
+            #print(data)
+            obj = json.loads(data)
+            print(obj)
+            edi_content = generate_edi_278_new(obj)
+            #blob_url = data.get("blob_url")
+            #member = data.get("member")
+            #print("Blob URL = ", blob_url)
+            #print("Member  = ", member)
         except Exception as e:
             return jsonify({"error": "No Input JSON Found", "details": str(e)}), 400
     else:
@@ -124,10 +128,10 @@ def create_edi():
         if not blob_url:
             return jsonify({"error": "blob_url is required"}), 400
             
-    json_object = read_edi_from_blob(blob_url)
-    obj = json.loads(json_object)
-    print(obj)
-    edi_content = generate_edi_278_new(obj)
+    #json_object = read_edi_from_blob(blob_url)
+    #obj = json.loads(data)
+    #print(obj)
+    #edi_content = generate_edi_278_new(obj)
     print("Generated EDI 278 File:")
     print(edi_content)
     response = {
