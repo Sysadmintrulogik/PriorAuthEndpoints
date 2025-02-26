@@ -12,97 +12,93 @@ def load_config(file_path="custom_edi.config"):
     with open(file_path, 'r') as file:
         return json.load(file)
 
-def generate_edi_278(details):
-    member = details.get("member", {})
-    provider = details.get("provider", {})
-    submitter = details.get("submitter", "SUBMITTER01")
-    receiver = details.get("receiver", "RECEIVER01")
-    payer = details.get("payer", "PAYER01")
-    eligibility = details.get("eligibility", {})
-    policy_benefits = details.get("policy_benefits", {})
-    prior_auth = details.get("prior_auth", {})
-    icd_codes = details.get("icd_codes", [])
-    cpt_codes = details.get("cpt_codes", [])
-    
-    now = datetime.datetime.now()
-    isa_date = now.strftime("%y%m%d")
-    isa_time = now.strftime("%H%M")
-    control_number = f"{random.randint(100000000, 999999999)}"
-    gs_date = now.strftime("%Y%m%d")
-    gs_time = now.strftime("%H%M")
-    group_control = f"{random.randint(1000, 9999)}"
-    transaction_set_control = f"{random.randint(1000, 9999)}"
-    reference_number = f"REF{random.randint(10000, 99999)}"
-    
+def generate_edi_278_new(json_obj):
     segments = []
-    segments.append(f"ISA*00*          *00*          *ZZ*{submitter:<15}*ZZ*{receiver:<15}*{isa_date}*{isa_time}*U*00401*{control_number}*0*P*:~")
-    segments.append(f"GS*HI*{submitter}*{receiver}*{gs_date}*{gs_time}*{group_control}*X*004010X278A1~")
-    segments.append(f"ST*278*{transaction_set_control}~")
-    segments.append(f"BHT*0007*13*{reference_number}*{gs_date}*{gs_time}~")
     
-    segments.append("HL*1**20*1~")
-    segments.append(f"NM1*82*2*{provider.get('name', 'Provider Name')}*****XX*{provider.get('npi', '0000000000')}~")
-    segments.append(f"N3*{provider.get('address', 'Provider Address')}~")
-    segments.append("N4*City*State*Zip~")
-    segments.append(f"PRV*PE*PXC*{provider.get('taxonomy', '0000000000')}~")
+    now = datetime.now()
+    current_date_yy = now.strftime('%y%m%d')
+    current_date_yyyy = now.strftime('%Y%m%d')
+    current_time = now.strftime('%H%M')
     
-    segments.append("HL*2*1*21*1~")
-    member_name = member.get("name", "John Doe")
-    if " " in member_name:
-        first_name, last_name = member_name.split(" ", 1)
-    else:
-        first_name = member_name
-        last_name = ""
-    segments.append(f"NM1*IL*1*{last_name}*{first_name}****MI*{member.get('member_id', 'M0001')}~")
-    #segments.append(f"NM1*IL*1*{last_name}*{first_name}****MI*{member.get('member_id', 'M0001')}~")
-    mem_dob = eligibility.get("dob", "09011947")
-    segments.append(f"DOB*{mem_dob}~")
-    #sub_dob = eligibility.get("subscriber_dob", member.get("dob", "09011947"))
-    #segments.append(f"DOB*{sub_dob}~")
-    segments.append(f"N3*{member.get('address', 'Member Address')}~")
+    # ISA - Interchange Control Header
+    # Remove the ">" at the end and end with ":~"
+    isa_segment = (
+        'ISA*00*          *00*          *ZZ*' + 
+        json_obj['submitter'].ljust(15) + 
+        '*ZZ*' + json_obj['receiver'].ljust(15) + 
+        '*' + current_date_yy + '*' + current_time + 
+        '*U*00401*000000001*0*P*:'
+    )
+    segments.append(isa_segment + '~')
     
-    segments.append("HL*3*2*22*0~")
-    segments.append(f"EB*{eligibility.get('is_eligible', 'Yes')}*{eligibility.get('start_date', '01-01-2022')}*{eligibility.get('end_date', '12-31-2025')}~")
-    segments.append(f"GRP*{eligibility.get('group_no', 'G0001')}~")
-    sub_dob = eligibility.get("subscriber_dob", "01011980")
-    segments.append(f"DOB*{sub_dob}~")
-    segments.append(f"PB*{policy_benefits.get('PolicyName', 'Default Policy')}*{policy_benefits.get('Coverage', 'HMO')}~")
-    for benefit in policy_benefits.get("details", []):
-        segments.append(f"BEN*{benefit.get('type', 'General')}*{benefit.get('description', 'No Description')}~")
+    # GS - Functional Group Header
+    gs_segment = f'GS*HC*{json_obj["submitter"][:2]}*{json_obj["receiver"][:2]}*{current_date_yyyy}*{current_time}*1*X*004010X096A1'
+    segments.append(gs_segment + '~')
     
-    segments.append(f"PA*{prior_auth.get('auth_status', 'Approved')}*{prior_auth.get('auth_number', 'AUTH12345')}*{prior_auth.get('auth_date', '01-01-2022')}*{prior_auth.get('auth_expiry_date', '12-31-2025')}~")
+    # ST - Transaction Set Header
+    st_control = now.strftime("%Y%m%d%H%M%S")
+    st_segment = f'ST*278*{st_control}*00'
+    segments.append(st_segment + '~')
     
-    for icd in icd_codes:
-        segments.append(f"ICD*{icd}~")
+    # BHT - Beginning of Hierarchical Transaction
+    segments.append('BHT*0007*13*REF47517*' + '~')
     
-    for cpt in cpt_codes:
-        segments.append(f"CPT*{cpt}~")
+    # HL segments: first for the subscriber (member), second for the provider.
+    segments.append('HL*1**20*1' + '~')  # HL for Member (Subscriber)
+    segments.append('HL*2*1*21*1' + '~')  # HL for Provider (child of the subscriber)
     
-    # Append SE segment with placeholders
-    segments.append("SE*{seg_count}*{transaction_set_control}~")
-    segments.append(f"GE*1*{group_control}~")
-    segments.append(f"IEA*1*{control_number}~")
+    # --- Member (Subscriber) Information ---
+    member = json_obj['member']
+    segments.append(f'NM1*IL*1*{member["name"]}*****34*{member["member_id"]}' + '~')
+    segments.append(f'N3*{member["address"]}' + '~')
+    try:
+        dob_dt = datetime.strptime(member["dob"], "%m-%d-%Y")
+        dob_formatted = dob_dt.strftime("%m-%d-%Y")
+    except Exception:
+        dob_formatted = member["dob"]
+    segments.append(f'DMG*D8*{dob_formatted}' + '~')
     
-    edi_str = "\n".join(segments)
-    edi_segments = edi_str.split("\n")
-    st_index = None
-    se_index = None
-    for i, seg in enumerate(edi_segments):
-        if seg.startswith("ST*"):
-            st_index = i
-        if seg.startswith("SE*"):
-            se_index = i
-            break
-    if st_index is not None and se_index is not None:
-        seg_count = se_index - st_index + 1
-        edi_segments[se_index] = edi_segments[se_index].replace("{seg_count}", str(seg_count))\
-                                                     .replace("{transaction_set_control}", transaction_set_control)
-    edi_str = "\n".join(edi_segments)
+    # --- Provider Information ---
+    provider = json_obj['provider']
+    segments.append(f'NM1*85*2*{provider["name"]}****46*{provider["npi"]}' + '~')
+    segments.append(f'N3*{provider["address"]}' + '~')
+    segments.append(f'PRV*BI*PXC*{provider["taxonomy"]}' + '~')
     
-    with open("edi278.txt", "w") as f:
-        f.write(edi_str)
+    # --- Submitter Information ---
+    segments.append(f'NM1*41*2*{json_obj["submitter"]}****46*{json_obj["submitter"][:10]}' + '~')
     
-    return edi_str
+    # --- Receiver Information ---
+    segments.append(f'NM1*40*2*{json_obj["receiver"]}****46*{json_obj["receiver"][:10]}' + '~')
+    
+    # --- Eligibility Information (using EB instead of ELG) ---
+    eligibility = json_obj['eligibility']
+    segments.append(
+        f'EB*{eligibility["is_eligible"]}*{eligibility["start_date"]}*{eligibility["end_date"]}*{eligibility["group_no"]}*{eligibility["subscriber_dob"]}' + '~'
+    )
+    
+    # --- Policy Benefits Header ---
+    # PB segment: includes PolicyName and Coverage from policy_benefits.
+    policy = json_obj['policy_benefits']
+    segments.append(f'PB*{policy["PolicyName"]}*{policy["Coverage"]}' + '~')
+    
+    # --- Policy Benefit Details ---
+    for benefit in policy['details']:
+        segments.append(f'BEN*{benefit["type"]}*{benefit["description"]}' + '~')
+    
+    # --- ICD Codes ---
+    for icd in json_obj['icd_codes']:
+        segments.append(f'ICD*{icd}' + '~')
+    
+    # --- CPT Codes ---
+    for cpt in json_obj['cpt_codes']:
+        segments.append(f'CPT*{cpt}' + '~')
+    
+    # --- Trailer Segments ---
+    segments.append(f'SE*{len(segments)+1}*0001' + '~')
+    segments.append('GE*1*1' + '~')
+    segments.append('IEA*1*000000001' + '~')
+    
+    return '\n'.join(segments)
 
 def read_edi_from_blob(blob_url):
     """Read EDI content from the given blob URL"""
@@ -139,15 +135,16 @@ def create_edi():
         print("Blob URL from GET = ", blob_url)
         if not blob_url:
             return jsonify({"error": "blob_url is required"}), 400
+            
     print("Blob URL = ", blob_url)
     json_object = read_edi_from_blob(blob_url)
     obj = json.loads(json_object)
     print(obj)
-    edi_content = generate_edi_278(obj)
+    edi_content = generate_edi_278_new(obj)
     print("Generated EDI 278 File:")
     print(edi_content)
     response = {
-        "message": "EDI Created based on given Member, Provider, Eligibility, Policy Benefits, ICD, CPT and PriorAuth",
+        "message": "EDI Created based on given Member, Provider, Eligibility, Policy Benefits, ICD, CPT Codes",
         "data": edi_content
     }
-    return (response)
+    return jsonify(response)
