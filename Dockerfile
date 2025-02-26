@@ -16,6 +16,12 @@ RUN pip install --prefix=/install -r requirements.txt
 
 FROM python:3.10-slim
 
+ENV DEBIAN_FRONTEND=noninteractive \
+    LC_ALL=en_US.UTF-8 \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US.UTF-8 \
+    PYTHONUNBUFFERED=1
+
 COPY --from=builder /install /usr/local
 
 RUN pip install -U langchain-community
