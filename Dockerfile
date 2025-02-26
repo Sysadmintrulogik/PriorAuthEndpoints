@@ -4,7 +4,8 @@ FROM python:3.10-slim as builder
 ENV DEBIAN_FRONTEND=noninteractive \
     LC_ALL=en_US.UTF-8 \
     LANG=en_US.UTF-8 \
-    LANGUAGE=en_US.UTF-8
+    LANGUAGE=en_US.UTF-8 \
+    PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
