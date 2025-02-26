@@ -128,9 +128,9 @@ def create_edi():
             data = request.get_json()
             print(data)
             blob_url = data.get("blob_url")
-            member_id = data.get("member_id")
+            member = data.get("member")
             print("Blob URL = ", blob_url)
-            print("Member ID = ", member_id)
+            print("Member  = ", member)
         except Exception as e:
             return jsonify({"error": "No Input JSON Found", "details": str(e)}), 400
     else:
