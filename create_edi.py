@@ -15,7 +15,7 @@ def load_config(file_path="custom_edi.config"):
 def generate_edi_278_new(json_obj):
     segments = []
     
-    now = datetime.now()
+    now = datetime.datetime.now()
     current_date_yy = now.strftime('%y%m%d')
     current_date_yyyy = now.strftime('%Y%m%d')
     current_time = now.strftime('%H%M')
@@ -112,26 +112,15 @@ def create_edi():
     if request.method == "POST":
         try:
             obj = request.get_json()
-            print(obj)
-            # obj = json.loads(data)
-            # print(obj)
             edi_content = generate_edi_278_new(obj)
-            #blob_url = data.get("blob_url")
-            #member = data.get("member")
-            #print("Blob URL = ", blob_url)
-            #print("Member  = ", member)
         except Exception as e:
-            return jsonify({"error": "No Input JSON Found", "details": str(e)}), 400
+            return jsonify({"error":  str(e)}), 400
     else:
         blob_url = request.args.get("blob_url")
         print("Blob URL from GET = ", blob_url)
         if not blob_url:
             return jsonify({"error": "blob_url is required"}), 400
-            
-    #json_object = read_edi_from_blob(blob_url)
-    #obj = json.loads(data)
-    #print(obj)
-    #edi_content = generate_edi_278_new(obj)
+        
     print("Generated EDI 278 File:")
     print(edi_content)
     response = {
