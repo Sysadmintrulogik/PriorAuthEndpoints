@@ -111,10 +111,10 @@ def create_edi():
     edi_content = ""
     if request.method == "POST":
         try:
-            data = request.get_json()
-            #print(data)
-            obj = json.loads(data)
+            obj = request.get_json()
             print(obj)
+            # obj = json.loads(data)
+            # print(obj)
             edi_content = generate_edi_278_new(obj)
             #blob_url = data.get("blob_url")
             #member = data.get("member")
