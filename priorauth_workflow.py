@@ -36,266 +36,224 @@ def load_config(file_path):
 
 claim_values = load_config("custom_edi.config")
 
-def generate_edi_278(details, output_file="edi278.txt"):
-    member = details.get("member", {})
-    provider = details.get("provider", {})
-    submitter = details.get("submitter", "SUBMITTER01")
-    receiver = details.get("receiver", "RECEIVER01")
-    payer = details.get("payer", "PAYER01")
-    eligibility = details.get("eligibility", {})
-    policy_benefits = details.get("policy_benefits", {})
-    prior_auth = details.get("prior_auth", {})
-    icd_codes = details.get("icd_codes", [])
-    cpt_codes = details.get("cpt_codes", [])
+def validate_edi_278(edi_message):
+    errors = []
     
-    now = datetime.datetime.now()
-    isa_date = now.strftime("%y%m%d")
-    isa_time = now.strftime("%H%M")
-    control_number = f"{random.randint(100000000, 999999999)}"
-    gs_date = now.strftime("%Y%m%d")
-    gs_time = now.strftime("%H%M")
-    group_control = f"{random.randint(1000, 9999)}"
-    transaction_set_control = f"{random.randint(1000, 9999)}"
-    reference_number = f"REF{random.randint(10000, 99999)}"
+    # Split into segments using "~" as the delimiter, and remove any empty segments.
+    segments = [seg.strip() for seg in edi_message.split('~') if seg.strip()]
     
-    segments = []
-    segments.append(f"ISA*00*          *00*          *ZZ*{submitter:<15}*ZZ*{receiver:<15}*{isa_date}*{isa_time}*U*00401*{control_number}*0*P*:~")
-    segments.append(f"GS*HI*{submitter}*{receiver}*{payer}*{gs_date}*{gs_time}*{group_control}*X*004010X278A1~")
-    segments.append(f"ST*278*{transaction_set_control}~")
-    segments.append(f"BHT*0007*13*{reference_number}*{gs_date}*{gs_time}~")
+    # Check that there is at least one segment
+    if not segments:
+        errors.append("No segments found in the EDI message.")
+        return False, errors
     
-    # Provider Hierarchical Level
-    segments.append("HL*1**20*1~")
-    segments.append(f"NM1*82*2*{provider.get('name', 'Provider Name')}*****XX*{provider.get('npi', '0000000000')}~")
-    segments.append(f"N3*{provider.get('address', 'Provider Address')}~")
-    segments.append("N4*City*State*Zip~")
-    segments.append(f"PRV*PE*PXC*{provider.get('taxonomy', '0000000000')}~")
-    
-    # Subscriber (Member) Hierarchical Level
-    segments.append("HL*2*1*21*1~")
-    member_name = member.get("name", "John Doe")
-    if " " in member_name:
-        first_name, last_name = member_name.split(" ", 1)
+    # Validate first segment: ISA
+    isa_segment = segments[0]
+    if not isa_segment.startswith("ISA"):
+        errors.append("First segment is not ISA.")
     else:
-        first_name = member_name
-        last_name = ""
-    segments.append(f"NM1*IL*1*{last_name}*{first_name}****MI*{member.get('member_id', 'M0001')}~")
-    # Member's DOB from member details
-    segments.append(f"DOB*{member.get('dob', '12-12-1980')}~")
-    segments.append(f"N3*{member.get('address', 'Member Address')}~")
+        # ISA should have exactly 16 elements (separated by "*")
+        isa_fields = isa_segment.split("*")
+        if len(isa_fields) != 16:
+            errors.append(f"ISA segment should have 16 fields but found {len(isa_fields)}.")
+        # Also check that ISA ends with ":" (colon) as specified in our format.
+        if not isa_segment.endswith(":"):
+            errors.append("ISA segment does not end with a colon (:) as required.")
     
-    # Eligibility / Benefits Hierarchical Level
-    segments.append("HL*3*2*22*0~")
-    segments.append(f"EB*{eligibility.get('is_eligible', 'Yes')}*{eligibility.get('start_date', '01-01-2022')}*{eligibility.get('end_date', '12-31-2023')}~")
-    # Subscriber's DOB from eligibility (kept separate)
-    if 'subscriber_dob' in eligibility:
-        segments.append(f"DMG*D8*{eligibility['subscriber_dob']}~")
-    segments.append(f"GRP*{eligibility.get('group_no', 'G0001')}~")
-    segments.append(f"PB*{policy_benefits.get('PolicyName', 'Default Policy')}*{policy_benefits.get('Coverage', 'HMO')}~")
-    for benefit in policy_benefits.get("details", []):
-        segments.append(f"BEN*{benefit.get('type', 'General')}*{benefit.get('description', 'No Description')}~")
-    
-    # Prior Authorization Details segment (PA)
-    segments.append(f"PA*{prior_auth.get('auth_status', 'Approved')}*{prior_auth.get('auth_number', 'AUTH12345')}*{prior_auth.get('auth_date', '01-01-2022')}*{prior_auth.get('auth_expiry_date', '12-31-2023')}~")
-    
-    for icd in icd_codes:
-        segments.append(f"ICD*{icd}~")
-    
-    for cpt in cpt_codes:
-        segments.append(f"CPT*{cpt}~")
-    
-    segments.append("SE*{seg_count}*{transaction_set_control}~")
-    segments.append(f"GE*1*{group_control}~")
-    segments.append(f"IEA*1*{control_number}~")
-    
-    edi_str = "\n".join(segments)
-    edi_segments = edi_str.split("\n")
-    st_index = None
-    se_index = None
-    for i, seg in enumerate(edi_segments):
-        if seg.startswith("ST*"):
-            st_index = i
-        if seg.startswith("SE*"):
-            se_index = i
-            break
-    if st_index is not None and se_index is not None:
-        seg_count = se_index - st_index + 1
-        edi_segments[se_index] = edi_segments[se_index].replace("{seg_count}", str(seg_count))\
-                                                     .replace("{transaction_set_control}", transaction_set_control)
-    edi_str = "\n".join(edi_segments)
-    
-    directory = os.path.dirname(output_file)
-    if directory and not os.path.exists(directory):
-        os.makedirs(directory)
-    
-    with open(output_file, "w") as f:
-        f.write(edi_str)
-    
-    return edi_str
-
-def create_edi(sample_input, output_file):
-    edi_content = generate_edi_278(sample_input, output_file)
-    return edi_content
-
-def validate_edi_278(content):
-    segments = [seg.strip() for seg in content.split("~") if seg.strip()]
-
-    if not segments or not segments[0].startswith("ISA"):
-        print("Error: Missing or invalid ISA segment.")
-        return False
-    if not any(seg.startswith("GS") for seg in segments):
-        print("Error: Missing GS segment.")
-        return False
-
-    try:
-        st_index = next(i for i, seg in enumerate(segments) if seg.startswith("ST"))
-    except StopIteration:
-        print("Error: Missing ST segment.")
-        return False
-
-    try:
-        se_index = next(i for i, seg in enumerate(segments[st_index:], start=st_index) if seg.startswith("SE"))
-    except StopIteration:
-        print("Error: Missing SE segment.")
-        return False
-
-    transaction_count = se_index - st_index + 1
-    se_fields = segments[se_index].split("*")
-    try:
-        expected_count = int(se_fields[1])
-    except (IndexError, ValueError):
-        print("Error: Invalid SE segment count.")
-        return False
-    print("Transaction Count = ",transaction_count)
-    print("Expected Count = ",expected_count)
-    #if transaction_count != expected_count:
-        #print("Error: Transaction segment count mismatch.")
-        #return False
-    if not any(seg.startswith("GE") for seg in segments):
-        print("Error: Missing GE segment.")
-        return False
+    # Validate last segment: IEA
     if not segments[-1].startswith("IEA"):
-        print("Error: Missing IEA segment.")
+        errors.append("Last segment is not IEA.")
+    
+    # Validate presence of GS, ST, BHT segments
+    required_segments = {"GS": False, "ST": False, "BHT": False, "IEA": False, "GE": False}
+    for seg in segments:
+        seg_id = seg.split("*")[0]
+        if seg_id in required_segments:
+            required_segments[seg_id] = True
+    for seg_id, present in required_segments.items():
+        if not present:
+            errors.append(f"Required segment {seg_id} is missing.")
+
+    # Validate that each segment ends with the tilde in the original message.
+    # (Since we split on "~", we check that the original message ended with "~")
+    if not edi_message.strip().endswith("~"):
+        errors.append("The EDI message does not end with a tilde (~).")
+    
+    # (Optional) You can add more validations for individual segments here.
+    # For example, validate that NM1 segments for member and provider exist.
+    nm1_member = [seg for seg in segments if seg.startswith("NM1*IL")]
+    if not nm1_member:
+        errors.append("No NM1 segment for member (subscriber) found.")
+    
+    nm1_provider = [seg for seg in segments if seg.startswith("NM1*85")]
+    if not nm1_provider:
+        errors.append("No NM1 segment for provider found.")
+    
+    # Additional validations (for ICD, CPT, etc.) can be added as needed.
+    is_valid = len(errors) == 0
+    return is_valid, errors
+
+def parse_edi_file(edi_content):
+    # Split the EDI content into segments using the tilde delimiter.
+    raw_segments = [seg.strip() for seg in edi_content.strip().split("~") if seg.strip()]
+    parsed_segments = []
+    
+    for segment in raw_segments:
+        # Split the segment into fields using the asterisk as a separator.
+        fields = segment.split("*")
+        if not fields:
+            continue
+        segment_id = fields[0].strip()
+
+        filtered_fields = []
+        for field in fields[1:]:
+            field = field.strip()
+            if len(field) > 1:
+                filtered_fields.append(field)
+        
+        parsed_segments.append({
+            "segment": segment_id,
+            "fields": filtered_fields
+        })
+    
+    return parsed_segments
+
+def is_valid_name(name):
+    words = name.strip().split()
+    if len(words) < 2:
+        return False
+    for word in words:
+        if not word.isalpha():
+            return False
+    return True
+
+def is_valid_member_id(mid):
+    mid = mid.strip()
+    if len(mid) < 10:
+        return False
+    pattern = re.compile(r'^(?=.*[a-z])(?=.*\d)(?=.*\W).{10,}$')
+    return bool(pattern.match(mid))
+
+def is_valid_address(address):
+    address = address.strip()
+    if len(address) < 12:
+        return False
+    if len(address.split()) < 3:
         return False
     return True
 
-def parse_edi_file(edi_content):
-    edi_text = edi_content.strip()
-    segments = [seg.strip() for seg in edi_text.split("~") if seg.strip()]
-    parsed_segments = []
-    for seg in segments:
-        # Split the segment into elements using "*" and filter out elements that are empty or one character long.
-        elements = [elem.strip() for elem in seg.split("*")]
-        filtered_elements = [elem for elem in elements if len(elem) > 1]
-        if filtered_elements:
-            parsed_segments.append({
-                "tag": filtered_elements[0],
-                "elements": filtered_elements[1:]
-            })
-    return parsed_segments
-    
-def is_name(s):
-    # True if s contains 2-4 words and no digits.
-    words = s.split()
-    return len(words) in [2, 3, 4] and not any(char.isdigit() for char in s)
+def is_valid_date(date_str):
+    date_str = date_str.strip()
+    for fmt in ("%Y%m%d", "%m-%d-%Y"):
+        try:
+            datetime.strptime(date_str, fmt)
+            return True
+        except ValueError:
+            continue
+    return False
 
-def is_npi(s):
-    # True if s is all digits and length between 7 and 11.
-    return s.isdigit() and 7 <= len(s) <= 11
+def is_valid_npi(npi):
+    npi = npi.strip()
+    return bool(re.fullmatch(r'\d{7,15}', npi))
 
-def is_taxonomy(s):
-    # True if s is alphanumeric, 7-11 characters long, containing at least one digit and one letter.
-    if not s.isalnum():
+def is_valid_taxonomy(tax):
+    tax = tax.strip()
+    if len(tax) < 8:
         return False
-    if not (7 <= len(s) <= 11):
-        return False
-    return any(char.isdigit() for char in s) and any(char.isalpha() for char in s)
+    pattern = re.compile(r'^(?=.*[A-Z])(?=.*\d).{8,}$')
+    return bool(pattern.match(tax))
 
-def extract_edi_fields(parsed_segments):
-    output = {
+def extract_features(edi_content):
+    segments = [seg.strip() for seg in edi_content.split("~") if seg.strip()]
+    result = {
         "member": {},
         "provider": {},
         "submitter": "",
         "receiver": "",
-        "payer": "",
-        "eligibility": {},
-        "policy_benefits": {"details": []},
-        "basic_auth": {},
         "icd_codes": [],
         "cpt_codes": []
     }
-    
-    for seg in parsed_segments:
-        tag = seg.get("tag")
-        elems = seg.get("elements", [])
-        
-        if tag == "GS":
-            # GS: [HI, Submitter Sanders, Receiver Roberts, Payer Paddington, ...]
-            if len(elems) >= 4:
-                output["submitter"] = elems[1]
-                output["receiver"] = elems[2]
-                output["payer"] = elems[3]
-        elif tag == "NM1":
-            # Provider NM1: first element "82"
-            if elems and elems[0] == "82":
-                for element in elems:
-                    if not output["provider"].get("name") and is_name(element):
-                        output["provider"]["name"] = element
-                    if not output["provider"].get("npi") and is_npi(element):
-                        output["provider"]["npi"] = element
-            # Member NM1: first element "IL"
-            elif elems and elems[0] == "IL":
-                if len(elems) >= 5:
-                    # For member, we assume first name is at index 2 and last name is at index 1.
-                    first_name = elems[2]
-                    last_name = elems[1]
-                    output["member"]["name"] = f"{first_name} {last_name}"
-                    output["member"]["member_id"] = elems[4]
-        elif tag == "DOB":
-            if elems:
-                output["member"]["dob"] = elems[0]
-        elif tag == "N3":
-            # If provider already has a name and no address, assign provider address.
-            if "name" in output["provider"] and "address" not in output["provider"]:
-                output["provider"]["address"] = elems[0]
-            elif "name" in output["member"] and "address" not in output["member"]:
-                output["member"]["address"] = elems[0]
-        elif tag == "PRV":
-            for element in elems:
-                if not output["provider"].get("taxonomy") and is_taxonomy(element):
-                    output["provider"]["taxonomy"] = element
-        elif tag == "EB":
-            if len(elems) >= 3:
-                output["eligibility"]["is_eligible"] = elems[0]
-                output["eligibility"]["start_date"] = elems[1]
-                output["eligibility"]["end_date"] = elems[2]
-        elif tag == "DMG":
-            if len(elems) >= 2:
-                output["eligibility"]["subscriber_dob"] = elems[1]
-        elif tag == "GRP":
-            if elems:
-                output["eligibility"]["group_no"] = elems[0]
-        elif tag == "PB":
-            if len(elems) >= 2:
-                output["policy_benefits"]["PolicyName"] = elems[0]
-                output["policy_benefits"]["Coverage"] = elems[1]
-        elif tag == "BEN":
-            if len(elems) >= 2:
-                benefit = {"type": elems[0], "description": elems[1]}
-                output["policy_benefits"]["details"].append(benefit)
-        elif tag == "PA":
-            if len(elems) >= 4:
-                output["basic_auth"]["auth_status"] = elems[0]
-                output["basic_auth"]["auth_number"] = elems[1]
-                output["basic_auth"]["auth_date"] = elems[2]
-                output["basic_auth"]["auth_expiry_date"] = elems[3]
-        elif tag == "ICD":
-            if elems:
-                output["icd_codes"].append(elems[0])
-        elif tag == "CPT":
-            if elems:
-                output["cpt_codes"].append(elems[0])  
-    return output
+    i = 0
+    while i < len(segments):
+        seg = segments[i]
+        fields = seg.split("*")
+        seg_id = fields[0].strip()
+        if seg_id == "NM1":
+            qualifier = fields[1].strip() if len(fields) > 1 else ""
+            if qualifier == "IL":
+                for field in fields[2:]:
+                    f = field.strip()
+                    if not result["member"].get("name", "") and is_valid_name(f):
+                        result["member"]["name"] = f
+                    if not result["member"].get("member_id", "") and is_valid_member_id(f):
+                        result["member"]["member_id"] = f
+                if i+1 < len(segments):
+                    next_fields = segments[i+1].split("*")
+                    if next_fields[0].strip() == "N3":
+                        for field in next_fields[1:]:
+                            f = field.strip()
+                            if is_valid_address(f):
+                                result["member"]["address"] = f
+                                break
+                        i += 1
+                if i+1 < len(segments):
+                    next_fields = segments[i+1].split("*")
+                    if next_fields[0].strip() == "DMG":
+                        for field in next_fields[1:]:
+                            f = field.strip()
+                            if is_valid_date(f):
+                                result["member"]["dob"] = f
+                                break
+                        i += 1
+            elif qualifier == "85":
+                for field in fields[2:]:
+                    f = field.strip()
+                    if not result["provider"].get("name", "") and is_valid_name(f):
+                        result["provider"]["name"] = f
+                    if not result["provider"].get("npi", "") and is_valid_npi(f):
+                        result["provider"]["npi"] = f
+                if i+1 < len(segments):
+                    next_fields = segments[i+1].split("*")
+                    if next_fields[0].strip() == "N3":
+                        for field in next_fields[1:]:
+                            f = field.strip()
+                            if is_valid_address(f):
+                                result["provider"]["address"] = f
+                                break
+                        i += 1
+                if i+1 < len(segments):
+                    next_fields = segments[i+1].split("*")
+                    if next_fields[0].strip() == "PRV":
+                        for field in next_fields[1:]:
+                            f = field.strip()
+                            if is_valid_taxonomy(f):
+                                result["provider"]["taxonomy"] = f
+                                break
+                        i += 1
+            elif qualifier == "41":
+                for field in fields[2:]:
+                    f = field.strip()
+                    if len(f) > 7:
+                        result["submitter"] = f
+                        break
+            elif qualifier == "40":
+                for field in fields[2:]:
+                    f = field.strip()
+                    if len(f) > 7:
+                        result["receiver"] = f
+                        break
+        elif seg_id == "ICD":
+            if len(fields) > 1:
+                code = fields[1].strip()
+                if code:
+                    result["icd_codes"].append(code)
+        elif seg_id == "CPT":
+            if len(fields) > 1:
+                code = fields[1].strip()
+                if code:
+                    result["cpt_codes"].append(code)
+        i += 1
+    return result
 
 def extract_provider_details(extracted_json):
     system_message = "You are a helpful assistant that extract healthcare provider related features from a Healthcare Claim inputted as JSON"
@@ -349,8 +307,8 @@ def extract_member_details(extracted_json):
     res = (m := re.search(r'({.*})', response, re.DOTALL)) and m.group(1)
     a = json.loads(res)
     #print(a)
-    b = json.dumps(a, indent=2)
-    return b
+    #b = json.dumps(a, indent=2)
+    return a
 
 def fetch_provider_score(provider_features, providers_db):
     retries = 3
@@ -382,7 +340,7 @@ def fetch_provider_score(provider_features, providers_db):
 
 def validate_provider_api(provider_features, providers_db):
     result = fetch_provider_score(provider_features, providers_db)
-    text = "Provider Validation Result"
+    #text = "Provider Validation Result"
     #print("PROVIDER FETCH RESULT = ", result)
     #print(result[0]['SCORE'])
     if result and result[0]['SCORE']:
@@ -422,7 +380,8 @@ def fetch_member_score(member_features, members_db):
     delay = 2
     for attempt in range(retries):
         try:
-            payload = json.loads(member_features)
+            #payload = json.loads(member_features)
+            payload = (member_features)
             print("Payload for Member = ", payload)
             headers = {"Accept": "application/json", "Content-Type": "application/json",}
             response = requests.post(members_db, json=payload, headers=headers)
@@ -447,16 +406,16 @@ def fetch_member_score(member_features, members_db):
 def validate_member_api(member_features, members_db):
     result = fetch_member_score(member_features, members_db) 
     text = "Member Validation Result"
-    print("MEMBER FETCH RESULT = ", result)
+    #print("MEMBER FETCH RESULT = ", result)
     if result and result[0]['SCORE']:
         score = ((result[0])['SCORE']['Final_Score'])
-        print("Score obtained = ", score)
+        #print("Score obtained = ", score)
         score1 = str(result[0]['SCORE'])    
         response = {
             "message": member_features,
             "data": score1
         }
-        if int(score)>=35:
+        if int(score)>=60:
             text = "Member Validated"
             print(text)
             response = {
@@ -473,53 +432,12 @@ def validate_member_api(member_features, members_db):
             }
             return (response, False)
     else:
-        print("Member Validated")
-        text = "Member Validated"
+        text = "Member Not available"
         response = {
             "message": text,
-            "data": 61.56
+            "data": ""
         }
-        return (response, True)
-
-def validate_eligibility(eligibility_features):
-    valid = False
-    elig = eligibility_features["is_eligible"].lower()
-    #print("eligibility = ",elig, type(elig))
-    if elig in ["yes", "true", "valid"]:
-        today = datetime.datetime.today()
-        print("Today's Date = ", today)
-        start = datetime.datetime.strptime(eligibility_features["start_date"], "%m-%d-%Y")
-        end = datetime.datetime.strptime(eligibility_features["end_date"], "%m-%d-%Y")
-        if start <= today <= end:
-            valid = True
-        else:
-            valid = False
-    return valid
-
-def validate_auth(auth_basics):
-    valid = False
-    elig = auth_basics["auth_status"].lower()
-    #print("eligibility = ",elig, type(elig))
-    if elig in ["approved", "true", "valid"]:
-        today = datetime.datetime.today()
-        print("Today's Date = ", today)
-        start = datetime.datetime.strptime(auth_basics["auth_date"], "%m-%d-%Y")
-        end = datetime.datetime.strptime(auth_basics["auth_expiry_date"], "%m-%d-%Y")
-        if start <= today <= end:
-            valid = True
-        else:
-            valid = False
-    return valid
-
-def extract_float(text):
-    # This regex pattern matches a float number (e.g., 23.84)
-    pattern = r'\d+\.\d+'
-    match = re.search(pattern, text)
-    if match:
-        # Convert the matched string to a float and return it
-        return float(match.group())
-    else:
-        return None
+        return (response, False)
         
 def read_edi_from_blob(blob_url):
     """Read EDI content from the given blob URL"""
