@@ -128,15 +128,15 @@ def create_edi():
         try:
             data = request.get_json()
             blob_url = data.get("blob_url")
+            print("Blob URL = ", blob_url)
         except Exception as e:
-            return jsonify({"error": "Input JSON doesn't seem to exist", "details": str(e)}), 400
+            return jsonify({"error": "No Input JSON Found", "details": str(e)}), 400
     else:
         blob_url = request.args.get("blob_url")
         print("Blob URL from GET = ", blob_url)
         if not blob_url:
             return jsonify({"error": "blob_url is required"}), 400
             
-    print("Blob URL = ", blob_url)
     json_object = read_edi_from_blob(blob_url)
     obj = json.loads(json_object)
     print(obj)
