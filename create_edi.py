@@ -122,7 +122,11 @@ def read_edi_from_blob(blob_url):
 @edi_bp.route('/create_edi', methods=['GET', 'POST'])
 def create_edi():
     claim_values = load_config("custom_edi.config")
-    sample_input = claim_values["edi_features"]       
+    sample_input = claim_values["edi_features"]  
+
+    print("Inside create_edi")
+
+    print(request.method)     
     
     if request.method == "POST":
         try:
