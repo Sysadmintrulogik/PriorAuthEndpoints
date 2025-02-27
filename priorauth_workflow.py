@@ -467,7 +467,7 @@ def authentication_flow():
             data = request.get_json()
             blob_url = data.get("blob_url")
         except Exception as e:
-            return jsonify({"error": "Invalid JSON", "details": str(e)}), 400
+            return jsonify({"error": "Input EDI File not available", "details": str(e)}), 400
     else:
         blob_url = request.args.get("blob_url")
         print("Blob URL from GET = ", blob_url)
