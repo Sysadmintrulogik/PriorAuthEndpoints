@@ -64,11 +64,13 @@ def generate_edi_278_new(json_obj):
     segments.append(f'N3*{provider["address"]}' + '~')
     segments.append(f'PRV*BI*PXC*{provider["taxonomy"]}' + '~')
     
-    # --- Submitter Information ---
-    segments.append(f'NM1*41*2*{json_obj["submitter"]}****46*{json_obj["submitter"][:10]}' + '~')
+     # --- Submitter Information ---
+    if "submitter" in json_obj:
+        segments.append(f'NM1*41*2*{json_obj["submitter"]}****46*{json_obj["submitter"][:10]}' + '~')
     
     # --- Receiver Information ---
-    segments.append(f'NM1*40*2*{json_obj["receiver"]}****46*{json_obj["receiver"][:10]}' + '~')
+    if "receiver" in json_obj:
+        segments.append(f'NM1*40*2*{json_obj["receiver"]}****46*{json_obj["receiver"][:10]}' + '~')
 
     # --- ICD Codes ---
     for icd in json_obj['icd_codes']:
