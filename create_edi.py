@@ -19,6 +19,7 @@ def generate_edi_278_new(json_obj):
     current_date_yy = now.strftime('%y%m%d')
     current_date_yyyy = now.strftime('%Y%m%d')
     current_time = now.strftime('%H%M')
+    print("current time = ", current_time)
     
     # ISA - Interchange Control Header
     # Remove the ">" at the end and end with ":~"
