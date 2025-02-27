@@ -22,18 +22,30 @@ def generate_edi_278_new(json_obj):
     
     # ISA - Interchange Control Header
     # Remove the ">" at the end and end with ":~"
-    isa_segment = (
-        'ISA*00*          *00*          *ZZ*' + 
-        json_obj['submitter'].ljust(15) + 
-        '*ZZ*' + json_obj['receiver'].ljust(15) + 
-        '*' + current_date_yy + '*' + current_time + 
-        '*U*00401*000000001*0*P*:'
-    )
-    segments.append(isa_segment + '~')
+    if 'submitter' in json_obj and 'receiver' in json_obj:
+        isa_segment = (
+            'ISA*00*          *00*          *ZZ*' + 
+            json_obj['submitter'].ljust(15) + 
+            '*ZZ*' + json_obj['receiver'].ljust(15) + 
+            '*' + current_date_yy + '*' + current_time + 
+            '*U*00401*000000001*0*P*:'
+        )
+        segments.append(isa_segment + '~')
+        gs_segment = f'GS*HC*{json_obj["submitter"][:2]}*{json_obj["receiver"][:2]}*{current_date_yyyy}*{current_time}*1*X*004010X096A1'
+        segments.append(gs_segment + '~')
+    else:
+        isa_segment = (
+            'ISA*00*          *00*          *ZZ*' + 
+            current_date_yy + '*' + current_time + 
+            '*U*00401*000000001*0*P*:'
+        )
+        segments.append(isa_segment + '~')
+        gs_segment = f'GS*HC*{current_date_yyyy}*{current_time}*1*X*004010X096A1'
+        segments.append(gs_segment + '~')
     
     # GS - Functional Group Header
-    gs_segment = f'GS*HC*{json_obj["submitter"][:2]}*{json_obj["receiver"][:2]}*{current_date_yyyy}*{current_time}*1*X*004010X096A1'
-    segments.append(gs_segment + '~')
+    #gs_segment = f'GS*HC*{json_obj["submitter"][:2]}*{json_obj["receiver"][:2]}*{current_date_yyyy}*{current_time}*1*X*004010X096A1'
+    #segments.append(gs_segment + '~')
     
     # ST - Transaction Set Header
     st_control = now.strftime("%Y%m%d%H%M%S")
