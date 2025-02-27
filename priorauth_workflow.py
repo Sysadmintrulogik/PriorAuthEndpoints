@@ -545,11 +545,10 @@ def authentication_flow():
         dict_prov_mem = {} 
         status = True
         dict_prov_mem["provider"] = provider_features
-        dict_prov_mem["provider_score"] = prov["data"]
         dict_prov_mem["member"] = member_features
-        s1 = ast.literal_eval(memb['data'])
-        dict_prov_mem["member_score"] = s1['Final_Score']
         if(valid_provider[1] == False) or (valid_member[1] == False):
+            dict_prov_mem["provider_score"] = prov["data"]
+            dict_prov_mem["member_score"] = memb['data']
             response = {
             "message": "Provider Or Member Validation Failed",
             "data": dict_prov_mem,
@@ -557,10 +556,9 @@ def authentication_flow():
             print(response)
             return jsonify(response)
         else:
-            #print("Provider Return = ",prov, type(prov), prov['data'], type(prov['data']))
-            #print("Member Return = ",memb, type(memb))
-            #s1 = ast.literal_eval(memb['data'])
-            #print("Member Return = ",s1, type(s1), s1['Final_Score'], type(s1['Final_Score']))           
+            s1 = ast.literal_eval(memb['data'])
+            dict_prov_mem["provider_score"] = prov["data"]
+            dict_prov_mem["member_score"] = s1['Final_Score']
             list_features = ["icd_codes", "cpt_codes"]
             if all(extracted_json[key] is not None and extracted_json[key] != '' for key in list_features):
                 for l in list_features:
