@@ -527,57 +527,57 @@ def authentication_flow():
         response = {"message":d1, "data":d2, "status":d3}
         return jsonify(response)
     else:
+        print("Both Provider and Member are extracted")
         provider_features = extract_provider_details(extracted_json)
         member_features = extract_member_details(extracted_json)
-        #print(provider_features)
-        #print(member_features)
+        print(provider_features, type(provider_features))
+        print(member_features, type(member_features))
         providers_db = "https://provider.dev.smarthub.trulogik.com/provider-match/"
         members_db = "https://provider.dev.smarthub.trulogik.com/member-match/"
         valid_provider = validate_provider_api(provider_features, providers_db)
         valid_member = validate_member_api(member_features, members_db)
         prov = valid_provider[0]
         memb = valid_member[0]
-        #print("Provider Return = ",prov["data"], type(prov["data"]))
-        #data_dict = ast.literal_eval(memb["data"])
-        #memb_data = json.dumps(data_dict, indent=4)
-        #memb_data = json.loads(memb["data"])
-        st = ""
-        st_float = 0
-        if len(st)>1:
-            st = memb["data"].split("Final_Score")[1]
-            st_float = extract_float(st)
-        else:
-            st_float = 61.56
-        #print("Member Return = ",st_float, type(st_float))
-        print(valid_provider)
-        print(valid_member)
+        print("valid provider Status = ", valid_provider)
+        print("valid member status = ", valid_member)
+          
         if(valid_provider[1] == False) or (valid_member[1] == False):
             response = {
             "message": "Provider Or Member Validation Failed",
             "data": {"provider":valid_provider[0], "member":valid_member[0]},
             "status":"fail"}
+            print(response)
             return jsonify(response)
         else:
-            eligibility_features = extracted_json["eligibility"]
-            valid1 = validate_eligibility(eligibility_features)
-            print("Validation for Eligibility = ",valid1)
-            auth_basics = extracted_json["basic_auth"]
-            valid2 = validate_auth(auth_basics)
-            print("Validation for Basic Auth Details = ",valid2)
-            if valid1 == False or valid2 == False:
-                response = {
-                    "message": "Provider and Member Validation Successful, but Eligibility Or Basic Auth Validation Failed",
-                    "data": {"provider":valid_provider[0], "member":valid_member[0]},
-                    "status":"fail"}
-                return jsonify(response)
-            else:
+            print("Provider Return = ",prov, type(prov), prov['data'], type(prov['data']))
+            print("Member Return = ",memb, type(memb))
+            s1 = ast.literal_eval(memb['data'])
+            print("Member Return = ",s1, type(s1), s1['Final_Score'], type(s1['Final_Score']))
+            
+            list_features = ["icd_codes", "cpt_codes"]
+            if all(extracted_json[key] is not None and extracted_json[key] != '' for key in list_features):
                 dict_prov_mem = {}
                 dict_prov_mem["provider"] = provider_features
                 dict_prov_mem["provider_score"] = prov["data"]
                 dict_prov_mem["member"] = member_features
-                dict_prov_mem["member_score"] = st_float
+                dict_prov_mem["member_score"] = s1['Final_Score']
+                for l in list_features:
+                    dict_prov_mem[l] = extracted_json[l]
+
                 response = {
                     "message": "All Validation Passed Successfully",
                     "data": dict_prov_mem,
                     "status":"pass"}
+                print(response)
+                end_time = time.time()
+                print(f"Execution Time: {end_time - start_time:.2f} seconds for Complete Workflow Processing ")
                 return jsonify(response)
+            else:
+                response = {
+                    "message": "Provider and Member Validation Successful, but one or more of the other features not Extracted",
+                    "data": {"provider":valid_provider[0], "member":valid_member[0]},
+                    "status":"fail"}
+                print (response)
+                end_time = time.time()
+                print(f"Execution Time: {end_time - start_time:.2f} seconds for Complete Workflow Processing ")
+            return jsonify(response)   
