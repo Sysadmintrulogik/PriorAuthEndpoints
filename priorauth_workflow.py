@@ -469,13 +469,9 @@ def authentication_flow():
         except Exception as e:
             return jsonify({"error": "Input EDI File not available", "details": str(e)}), 400
     else:
-        if 'file' not in request.files:
+        if not request.form.get('blob_url'):
             return jsonify({"error": "blob_url is required"}), 400
-        file = request.files['file']
-        if file.filename == '':
-            return jsonify({"error": "blob_url is Empty"}), 400
-        blob_url = file.read().decode('utf-8') 
-        #blob_url = request.args.get("blob_url")
+        blob_url = request.form.get('blob_url')
         print("Blob URL from GET = ", blob_url)
 
     print(f"Processing EDI from Blob URL: {blob_url}")
