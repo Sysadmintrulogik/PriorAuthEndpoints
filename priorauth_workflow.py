@@ -462,17 +462,21 @@ def read_edi_from_blob(blob_url):
 def authentication_flow():
     claim_values = load_config("custom_edi.config")
     
-    if request.method == "POST":
+    if request.method == "GET":
         try:
             data = request.get_json()
             blob_url = data.get("blob_url")
         except Exception as e:
             return jsonify({"error": "Input EDI File not available", "details": str(e)}), 400
     else:
-        blob_url = request.args.get("blob_url")
-        print("Blob URL from GET = ", blob_url)
-        if not blob_url:
+        if 'file' not in request.files:
             return jsonify({"error": "blob_url is required"}), 400
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "blob_url is Empty"}), 400
+        blob_url = file.read().decode('utf-8') 
+        #blob_url = request.args.get("blob_url")
+        print("Blob URL from GET = ", blob_url)
 
     print(f"Processing EDI from Blob URL: {blob_url}")
     start_time = time.time()
