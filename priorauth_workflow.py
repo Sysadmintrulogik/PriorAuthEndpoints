@@ -486,6 +486,7 @@ def authentication_flow():
         d2 = ""
         d3 = "fail"
         response = {"message":d1, "data":d2, "status":d3}
+        #print(response)
         return jsonify(response)
     edi_validity = validate_edi_278(edi_content)
     if edi_validity == False:
@@ -493,9 +494,13 @@ def authentication_flow():
         d2 = ""
         d3 = "fail"
         response = {"message":d1, "data":d2, "status":d3}
+        #print(response)
         return jsonify(response)
+    else:
+        print("EDI Validated")
     parsed = parse_edi_file(edi_content)
-    extracted_json = extract_edi_fields(parsed)
+    extracted_json = extract_features(edi_content)
+    print(extracted_json)
     if not list(extracted_json.keys()):
         d1 = "Feature Extraction Failed",
         d2 = ""
@@ -540,30 +545,30 @@ def authentication_flow():
         memb = valid_member[0]
         print("valid provider Status = ", valid_provider)
         print("valid member status = ", valid_member)
-          
+       
+        dict_prov_mem = {} 
+        status = True
+        dict_prov_mem["provider"] = provider_features
+        dict_prov_mem["provider_score"] = prov["data"]
+        dict_prov_mem["member"] = member_features
+        s1 = ast.literal_eval(memb['data'])
+        dict_prov_mem["member_score"] = s1['Final_Score']
         if(valid_provider[1] == False) or (valid_member[1] == False):
             response = {
             "message": "Provider Or Member Validation Failed",
-            "data": {"provider":valid_provider[0], "member":valid_member[0]},
+            "data": dict_prov_mem,
             "status":"fail"}
             print(response)
             return jsonify(response)
         else:
-            print("Provider Return = ",prov, type(prov), prov['data'], type(prov['data']))
-            print("Member Return = ",memb, type(memb))
-            s1 = ast.literal_eval(memb['data'])
-            print("Member Return = ",s1, type(s1), s1['Final_Score'], type(s1['Final_Score']))
-            
+            #print("Provider Return = ",prov, type(prov), prov['data'], type(prov['data']))
+            #print("Member Return = ",memb, type(memb))
+            #s1 = ast.literal_eval(memb['data'])
+            #print("Member Return = ",s1, type(s1), s1['Final_Score'], type(s1['Final_Score']))           
             list_features = ["icd_codes", "cpt_codes"]
             if all(extracted_json[key] is not None and extracted_json[key] != '' for key in list_features):
-                dict_prov_mem = {}
-                dict_prov_mem["provider"] = provider_features
-                dict_prov_mem["provider_score"] = prov["data"]
-                dict_prov_mem["member"] = member_features
-                dict_prov_mem["member_score"] = s1['Final_Score']
                 for l in list_features:
                     dict_prov_mem[l] = extracted_json[l]
-
                 response = {
                     "message": "All Validation Passed Successfully",
                     "data": dict_prov_mem,
@@ -575,9 +580,9 @@ def authentication_flow():
             else:
                 response = {
                     "message": "Provider and Member Validation Successful, but one or more of the other features not Extracted",
-                    "data": {"provider":valid_provider[0], "member":valid_member[0]},
+                    "data": dict_prov_mem,
                     "status":"fail"}
                 print (response)
                 end_time = time.time()
                 print(f"Execution Time: {end_time - start_time:.2f} seconds for Complete Workflow Processing ")
-            return jsonify(response)   
+            return jsonify(response)
