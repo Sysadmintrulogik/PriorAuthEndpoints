@@ -21,6 +21,8 @@ api = Api(app)
 
 api.register_blueprint(edi_bp)
 api.register_blueprint(wfo_bp)
+api.register_blueprint(edi_resp_bp)
+api.register_blueprint(wfo_resp_bp)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.getenv("APP_PORT", 8000)), debug=bool(os.getenv("DEBUG", False)))
