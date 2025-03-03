@@ -121,7 +121,7 @@ def create_edi():
     if request.method == "POST":
         try:
             obj = request.get_json()
-            edi_content = generate_edi_278_new(obj)
+            edi_content = generate_edi_278_response(obj)
         except Exception as e:
             return jsonify({"error":  str(e)}), 400
     else:
