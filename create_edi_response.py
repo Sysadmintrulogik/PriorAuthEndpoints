@@ -74,7 +74,7 @@ def generate_edi_278_response(json_obj):
         segments.append(f'HCR*A1******X*Y~')
         list_errs = authorization["reason_code"]
         for l in list_errs:
-            segments.append(f'AAA03*{l}*T5*C~')
+            segments.append(f'AAA03*Y***{l}*C~')
     else:
         segments.append(f'HCR*A1*PXC*{authorization["cert_number"]}' + '~') # Extra line compared to EDI 278 Review Request
         segments.append(f'DTP*AAH*RD8*{authorization["start_date"]}-{authorization["end_date"]}' + '~') # Extra line compared to EDI 278 
