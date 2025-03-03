@@ -139,7 +139,7 @@ def create_edi():
     print("Generated EDI 278 File:")
     print(edi_content)
     response = {
-        "message": EDI Response Created based on given Member, Provider, ICD, CPT, Authorization and Error Codes if any",
+        "message": "EDI Response Created based on given Member, Provider, ICD, CPT, Authorization and Error Codes if any",
         "data": edi_content
     }
     return jsonify(response)
