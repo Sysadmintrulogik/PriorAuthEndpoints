@@ -70,7 +70,7 @@ def generate_edi_278_response(json_obj):
     segments.append(f'N3*{provider["address"]}' + '~')
     segments.append(f'PRV*BI*PXC*{provider["taxonomy"]}' + '~')
     authorization = json_obj['authorization']
-    if "reason_code" in authorization:#authorization
+    if "reason_code" in authorization:
         segments.append(f'HCR*A1******X*Y~')
         list_errs = authorization["reason_code"]
         for l in list_errs:
