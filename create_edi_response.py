@@ -70,8 +70,14 @@ def generate_edi_278_response(json_obj):
     segments.append(f'N3*{provider["address"]}' + '~')
     segments.append(f'PRV*BI*PXC*{provider["taxonomy"]}' + '~')
     authorization = json_obj['authorization']
-    segments.append(f'HCR*A1*PXC*{authorization["cert_number"]}' + '~') # Extra line compared to EDI 278 Review Request
-    segments.append(f'DTP*AAH*RD8*{authorization["start_date"]}-{authorization["end_date"]}' + '~') # Extra line compared to EDI 278 Review Request
+    if "reason_code" in authorization:#authorization
+        segments.append(f'HCR*A1******X*Y~')
+        list_errs = authorization["reason_code"]
+        for l in list_errs:
+            segments.append(f'AAA03*{l}*T5*C~')
+    else:
+        segments.append(f'HCR*A1*PXC*{authorization["cert_number"]}' + '~') # Extra line compared to EDI 278 Review Request
+        segments.append(f'DTP*AAH*RD8*{authorization["start_date"]}-{authorization["end_date"]}' + '~') # Extra line compared to EDI 278 
     
     # --- Submitter Information ---
     if "submitter" in json_obj:
@@ -133,7 +139,7 @@ def create_edi():
     print("Generated EDI 278 File:")
     print(edi_content)
     response = {
-        "message": "EDI Response Created based on given Member, Provider, ICD, CPT and Authorization",
+        "message": EDI Response Created based on given Member, Provider, ICD, CPT, Authorization and Error Codes if any",
         "data": edi_content
     }
     return jsonify(response)
