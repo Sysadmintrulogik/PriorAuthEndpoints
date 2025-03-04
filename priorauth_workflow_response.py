@@ -2,9 +2,6 @@ import ast
 import json
 from datetime import datetime
 import os
-import re
-import requests
-import time
 from flask import request, jsonify
 from langchain.chat_models import AzureChatOpenAI
 from dotenv import load_dotenv
