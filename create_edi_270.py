@@ -52,7 +52,7 @@ def generate_edi_270(json_obj):
     
     # BHT - Beginning of Hierarchical Transaction
     purpose_code = '13'
-    segments.append('BHT*0022*13*REF47517*20250303*{st_control}' + '~') ##CHANGE
+    segments.append('BHT*0022*13*REF47517*20250303*1319' + '~') ##CHANGE
     
     # HL segments: first for the subscriber (member), second for the provider.
     segments.append('HL*1**20*1' + '~')  # HL for Member (Subscriber)
