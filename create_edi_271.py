@@ -147,6 +147,7 @@ def generate_edi_271(json_obj):
     segments.append(f'SE*{len(segments)+1}*{st_control}~')
     #segments.append('GE*1*1' + '~')
     segments.append('IEA*1*000000001' + '~')
+    
     return '\n'.join(segments)
 
 @edi_271_bp.route('/create_edi', methods=['GET', 'POST'])
