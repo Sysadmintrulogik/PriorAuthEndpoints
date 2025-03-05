@@ -110,11 +110,19 @@ def create_edi():
     if request.method == "POST":
         try:
             obj = request.get_json()
+            edi_content = generate_edi_270(obj)
         except Exception as e:
             return jsonify({"error":  str(e)}), 400
     else:
         blob_url = request.args.get("blob_url")
+        print("Blob URL from GET = ", blob_url)
         if not blob_url:
             return jsonify({"error": "blob_url is required"}), 400
-        
-    return jsonify({"message": "EDI Created based on given Member, Provider, Eligibility, Policy Benefits, ICD, CPT Codes"})
+
+    print("Generated EDI 270 File:")
+    print(edi_content)
+    response = {
+        "message": "EDI 270 Created based on given Member, Provider, ICD, CPT, Payer",
+        "data": edi_content
+    }   
+    return jsonify(response)
