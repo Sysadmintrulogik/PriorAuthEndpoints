@@ -97,7 +97,7 @@ def generate_edi_270(json_obj):
         segments.append(f'CPT*{cpt}' + '~')
     
     # --- Trailer Segments ---
-    segments.append(f'SE*{len(segments)+1}*0001' + '~')
+    segments.append(f'SE*{len(segments)+1}*{st_control}~')
     segments.append('GE*1*1' + '~')
     segments.append('IEA*1*000000001' + '~')
     
