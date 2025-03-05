@@ -1,4 +1,4 @@
-import os
+import os, json
 from flask import request, jsonify
 from langchain.chat_models import AzureChatOpenAI
 from dotenv import load_dotenv
