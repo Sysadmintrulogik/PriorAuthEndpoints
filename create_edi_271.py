@@ -13,6 +13,11 @@ def load_config(file_path="custom_edi.config"):
     with open(file_path, 'r') as file:
         return json.load(file)
 
+def check_invalid(obj):
+    if not isinstance(obj, list):
+        return True
+    return any(item is None for item in obj)
+    
 def generate_edi_271(json_obj):
     segments = []
     
