@@ -88,13 +88,21 @@ def generate_edi_271(json_obj):
     #segments.append(f'N3*{provider["address"]}' + '~')
     #segments.append(f'PRV*BI*PXC*{provider["taxonomy"]}' + '~')
 
-    # --- ICD Codes ---
-    for icd in json_obj['icd_codes']:
-        segments.append(f'ICD*{icd}' + '~')
+  # --- ICD Codes ---
+    icd_list = json_obj['icd_codes']
+    if check_invalid(icd_list) == False:
+        for icd in json_obj['icd_codes']:
+            segments.append(f'ICD*{icd}' + '~')
+    else:
+        segments.append(f'ICD*Null' + '~')
     
     # --- CPT Codes ---
-    for cpt in json_obj['cpt_codes']:
-        segments.append(f'CPT*{cpt}' + '~')
+    cpt_list = json_obj['cpt_codes']
+    if check_invalid(cpt_list) == False:
+        for cpt in json_obj['cpt_codes']:
+            segments.append(f'CPT*{cpt}' + '~')
+    else:
+        segments.append(f'CPT*Null' + '~')
 
     # ----- Benefits Information --------- #
     #EB*1**30**GOLD 123 PLAN~ #EB*1**1>33>35>47>86>88>98>AL>MH>UC~ #EB*B**1>33>35>47>86>88>98>AL>MH>UC*HM*GOLD 123 PLAN*27*10*****Y~ #LS*2120~ #LE*2120~#
