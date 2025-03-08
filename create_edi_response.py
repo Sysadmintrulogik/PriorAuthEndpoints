@@ -70,14 +70,15 @@ def generate_edi_278_response(json_obj):
     segments.append(f'N3*{provider["address"]}' + '~')
     segments.append(f'PRV*BI*PXC*{provider["taxonomy"]}' + '~')
     authorization = json_obj['authorization']
-    if "reason_code" in authorization:
+    if "reason_code" in authorization:#authorization
         segments.append(f'HCR*A1******X*Y~')
-        list_errs = authorization["reason_code"]
-        for l in list_errs:
-            segments.append(f'AAA03*Y***{l}*C~')
+        segments.append(f'DTP*AAH*RD8*{authorization["start_date"]}-{authorization["end_date"]}' + '~')
+        list_errs = authorization["reason_code"]#AAA*Y**42*C~
+        for l in list_errs: 
+            segments.append(f'AAA*03*Y**{l}*C~')
     else:
         segments.append(f'HCR*A1*PXC*{authorization["cert_number"]}' + '~') # Extra line compared to EDI 278 Review Request
-        segments.append(f'DTP*AAH*RD8*{authorization["start_date"]}-{authorization["end_date"]}' + '~') # Extra line compared to EDI 278 
+        segments.append(f'DTP*AAH*RD8*{authorization["start_date"]}-{authorization["end_date"]}' + '~') # Extra line compared to EDI 278 Review Request
     
     # --- Submitter Information ---
     if "submitter" in json_obj:
