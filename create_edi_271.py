@@ -167,6 +167,12 @@ def generate_edi_271(json_obj):
 def create_edi():
     claim_values = load_config("custom_edi.config")
 
+    if not request.form.get('blob_url'):
+        return jsonify({"error": "blob_url is required"}), 400
+    blob_url = request.form.get('blob_url')
+    edi_content = generate_edi_271(obj)
+
+    """
     edi_content = ""
     if request.method == "POST":
         try:
@@ -179,6 +185,7 @@ def create_edi():
         print("Blob URL from GET = ", blob_url)
         if not blob_url:
             return jsonify({"error": "blob_url is required"}), 400
+    """
 
     print("Generated EDI 271 File:")
     print(edi_content)
