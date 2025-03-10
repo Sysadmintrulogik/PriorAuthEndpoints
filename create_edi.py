@@ -14,91 +14,81 @@ def load_config(file_path="custom_edi.config"):
 
 def generate_edi_278_new(json_obj):
     segments = []
-    
-    now = datetime.datetime.now()
+    now = datetime.now()
     current_date_yy = now.strftime('%y%m%d')
     current_date_yyyy = now.strftime('%Y%m%d')
     current_time = now.strftime('%H%M')
-    print("current time = ", current_time)
-    
-    # ISA - Interchange Control Header
-    # Remove the ">" at the end and end with ":~"
-    if 'submitter' in json_obj and 'receiver' in json_obj:
-        isa_segment = (
-            'ISA*00*          *00*          *ZZ*' + 
-            json_obj['submitter'].ljust(15) + 
-            '*ZZ*' + json_obj['receiver'].ljust(15) + 
-            '*' + current_date_yy + '*' + current_time + 
-            '*U*00401*000000001*0*P*:'
-        )
-        segments.append(isa_segment + '~')
-        gs_segment = f'GS*HC*{json_obj["submitter"][:2]}*{json_obj["receiver"][:2]}*{current_date_yyyy}*{current_time}*1*X*004010X096A1'
-        segments.append(gs_segment + '~')
-    else:
-        isa_segment = (
-            'ISA*00*          *00*          *ZZ*' + 
-            current_date_yy + '*' + current_time + 
-            '*U*00401*000000001*0*P*:'
-        )
-        segments.append(isa_segment + '~')
-        gs_segment = f'GS*HC*{current_date_yyyy}*{current_time}*1*X*004010X096A1'
-        segments.append(gs_segment + '~')
-    
-    # GS - Functional Group Header
-    #gs_segment = f'GS*HC*{json_obj["submitter"][:2]}*{json_obj["receiver"][:2]}*{current_date_yyyy}*{current_time}*1*X*004010X096A1'
-    #segments.append(gs_segment + '~')
-    
-    # ST - Transaction Set Header
+
+    # ISA Segment
+    isa = ('ISA*00*          *00*          *ZZ*' +
+           json_obj["submitter"].ljust(15) +
+           '*ZZ*' + json_obj["receiver"].ljust(15) +
+           '*' + current_date_yy +
+           '*' + current_time +
+           '*U*00401*000000001*0*P*:')  
+    segments.append(isa + '~')
+
+    # GS Segment
+    gs = f'GS*HC*{json_obj["submitter"][:2]}*{json_obj["receiver"][:2]}*{current_date_yyyy}*{current_time}*1*X*004010X096A1'
+    segments.append(gs + '~')
+
+    # ST Segment
     st_control = now.strftime("%Y%m%d%H%M%S")
-    st_segment = f'ST*278*{st_control}*00'
-    segments.append(st_segment + '~')
-    
-    # BHT - Beginning of Hierarchical Transaction
+    segments.append(f'ST*278*{st_control}*00' + '~')
+
+    # BHT Segment
     segments.append('BHT*0007*13*REF47517*' + '~')
-    
-    # HL segments: first for the subscriber (member), second for the provider.
-    segments.append('HL*1**20*1' + '~')  # HL for Member (Subscriber)
-    segments.append('HL*2*1*21*1' + '~')  # HL for Provider (child of the subscriber)
-    
-    # --- Member (Subscriber) Information ---
-    member = json_obj['member']
+
+    # HL Segments
+    segments.append("HL*1**20*1~")  # Subscriber HL
+    segments.append("HL*2*1*21*1~")  # Provider HL
+
+    if "trace_no" in json_obj:
+        segments.append(f'TRN*1*{json_obj["trace_no"]}*9012345678' + '~')
+    else:
+        segments.append('TRN*1*111099*9012345678~')
+
+    # Member Information (NM1, N3, DMG segments)
+    member = json_obj["member"]
     segments.append(f'NM1*IL*1*{member["name"]}*****34*{member["member_id"]}' + '~')
     segments.append(f'N3*{member["address"]}' + '~')
     try:
         dob_dt = datetime.strptime(member["dob"], "%m-%d-%Y")
-        dob_formatted = dob_dt.strftime("%m-%d-%Y")
+        dob_formatted = dob_dt.strftime("%Y%m%d")
     except Exception:
         dob_formatted = member["dob"]
     segments.append(f'DMG*D8*{dob_formatted}' + '~')
-    
-    # --- Provider Information ---
-    provider = json_obj['provider']
+
+    # Provider Information (NM1, N3, PRV segments)
+    provider = json_obj["provider"]
     segments.append(f'NM1*85*2*{provider["name"]}****46*{provider["npi"]}' + '~')
     segments.append(f'N3*{provider["address"]}' + '~')
     segments.append(f'PRV*BI*PXC*{provider["taxonomy"]}' + '~')
-    
-     # --- Submitter Information ---
-    if "submitter" in json_obj:
-        segments.append(f'NM1*41*2*{json_obj["submitter"]}****46*{json_obj["submitter"][:10]}' + '~')
-    
-    # --- Receiver Information ---
-    if "receiver" in json_obj:
-        segments.append(f'NM1*40*2*{json_obj["receiver"]}****46*{json_obj["receiver"][:10]}' + '~')
 
-    # --- ICD Codes ---
-    for icd in json_obj['icd_codes']:
-        segments.append(f'ICD*{icd}' + '~')
-    
-    # --- CPT Codes ---
-    for cpt in json_obj['cpt_codes']:
-        segments.append(f'CPT*{cpt}' + '~')
-    
-    # --- Trailer Segments ---
-    segments.append(f'SE*{len(segments)+1}*0001' + '~')
+    # PA Requests (PA request segments)
+    if "paRequesets" in json_obj:
+        for pa_request in json_obj["paRequesets"]:
+            segments.append(f'SVC*{pa_request["serviceCodeType"]}*{pa_request["cptProcedureCode"]}~')
+            if pa_request["icdProcedureCode"]:
+                segments.append(f'ICD*{pa_request["icdProcedureCode"]}~')
+            if pa_request["dateOfService"]:
+                segments.append(f'DTP*291*D8*{pa_request["dateOfService"]}~')
+            if pa_request["placeOfService"]:
+                segments.append(f'POS*{pa_request["placeOfService"]}~')
+            if pa_request["diagnosis"]:
+                segments.append(f'DX*{pa_request["diagnosis"]}~')
+
+    # SE Segment
+    segment_count = len(segments) - 2  # Excluding SE and IEA segments
+    segments.append(f'SE*{segment_count}*0001' + '~')
+
+    # GE Segment
     segments.append('GE*1*1' + '~')
+
+    # IEA Segment
     segments.append('IEA*1*000000001' + '~')
-    
-    return '\n'.join(segments)
+
+    return "\n".join(segments)
 
 def read_edi_from_blob(blob_url):
     """Read EDI content from the given blob URL"""
@@ -139,7 +129,7 @@ def create_edi():
     print("Generated EDI 278 File:")
     print(edi_content)
     response = {
-        "message": "EDI Created based on given Member, Provider, Eligibility, Policy Benefits, ICD, CPT Codes",
+        "message": "EDI 278 Created based on given Member, Provider, ICD, CPT, Submitter Receiver",
         "data": edi_content
     }
     return jsonify(response)
