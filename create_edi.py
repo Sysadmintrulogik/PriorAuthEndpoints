@@ -66,19 +66,47 @@ def generate_edi_278_new(json_obj):
     segments.append(f'N3*{provider["address"]}' + '~')
     segments.append(f'PRV*BI*PXC*{provider["taxonomy"]}' + '~')
 
+    if 'icd_codes' in json_obj:
+        if json_obj['icd_codes'] is None:
+            segments.append(f'ICD*NULL' + '~')
+        else:
+            icd = json_obj['icd_codes']
+            segments.append(f'ICD*{icd}' + '~')
+
+    if 'cpt_codes' in json_obj:
+        if json_obj['cpt_codes'] is None:
+            segments.append(f'CPT*NULL' + '~')
+        else:
+            cpt = json_obj['cpt_codes']
+            segments.append(f'CPT*{cpt}' + '~')
+            
     # PA Requests (PA request segments)
     if "paRequesets" in json_obj:
-        for pa_request in json_obj["paRequesets"]:
-            if pa_request["serviceCodeType"]:
-                segments.append(f'SVC*{pa_request["serviceCodeType"]}*{pa_request["cptProcedureCode"]}~')
-            if pa_request["icdProcedureCode"]:
-                segments.append(f'ICD*{pa_request["icdProcedureCode"]}~')
-            if pa_request["dateOfService"]:
-                segments.append(f'DTP*291*D8*{pa_request["dateOfService"]}~')
-            if pa_request["placeOfService"]:
-                segments.append(f'POS*{pa_request["placeOfService"]}~')
-            if pa_request["diagnosis"]:
-                segments.append(f'DX*{pa_request["diagnosis"]}~')
+        if json_obj["paRequesets"] is None:
+            segments.append(f'SVC*null~')
+            segments.append(f'POS*null~')
+            segments.append(f'DX*null~')
+        else:
+            for pa_request in json_obj["paRequesets"]:
+                if "authType" in pa_request:
+                    if pa_request["authType"] is None:
+                        segments.append(f'SVC*null~')
+                    else:
+                        if "serviceCodeType" in pa_request:
+                            if pa_request["serviceCodeType"] == "cpt":
+                                segments.append(f'SVC*30*CPT*{pa_request["procedureCode"]}~')
+                            elif pa_request["serviceCodeType"] == "icd":
+                                segments.append(f'SVC*30*ICD*{pa_request["procedureCode"]}~')
+                            else:
+                                segments.append(f'SVC*30**~')
+                        else:
+                             segments.append(f'SVC*30**~')
+                        if pa_request["dateOfService"]:
+                            segments.append(f'DTP*291*D8*{pa_request["dateOfService"]}~')
+                        if pa_request["placeOfService"]:
+                            segments.append(f'POS*{pa_request["placeOfService"]}~')
+                        if pa_request["diagnosis"]:
+                            segments.append(f'DX*{pa_request["diagnosis"]}~')
 
     # SE Segment
     segment_count = len(segments) - 2  # Excluding SE and IEA segments
