@@ -120,7 +120,7 @@ def generate_edi_270(json_obj):
                     segments.append(f'SVC*{pa_request["serviceCodeType"]}*{pa_request["cptProcedureCode"]}~')
                 else:
                     segments.append(f'SVC*{pa_request["serviceCodeType"]}*'+'**~')
-            if ("icdProcedureCode" in pa_request) and pa_request["icdProcedureCode"]:
+            if pa_request["icdProcedureCode"]:
                 segments.append(f'ICD*{pa_request["icdProcedureCode"]}~')
             if pa_request["dateOfService"]:
                 segments.append(f'DTP*291*D8*{pa_request["dateOfService"]}~')
