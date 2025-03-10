@@ -190,6 +190,7 @@ def create_edi():
         return jsonify({"error": "blob_url is required"}), 400
     blob_url = request.form.get('blob_url')
     json_object = read_edi_from_blob(blob_url)
+    print("JSON Object = ",json_object)
     edi_content = generate_edi_271(json_object)
 
     """
