@@ -70,7 +70,7 @@ def generate_edi_278_response(json_obj):
     segments.append(f'N3*{provider["address"]}' + '~')
     segments.append(f'PRV*BI*PXC*{provider["taxonomy"]}' + '~')
     authorization = json_obj['authorization']
-    if "reason_code" in authorization:#authorization
+    if "reason_code" in authorization:
         segments.append(f'HCR*A1******X*Y~')
         segments.append(f'DTP*AAH*RD8*{authorization["start_date"]}-{authorization["end_date"]}' + '~')
         list_errs = authorization["reason_code"]#AAA*Y**42*C~
@@ -88,13 +88,47 @@ def generate_edi_278_response(json_obj):
     if "receiver" in json_obj:
         segments.append(f'NM1*40*2*{json_obj["receiver"]}****46*{json_obj["receiver"][:10]}' + '~')
 
-    # --- ICD Codes ---
-    for icd in json_obj['icd_codes']:
-        segments.append(f'ICD*{icd}' + '~')
-    
-    # --- CPT Codes ---
-    for cpt in json_obj['cpt_codes']:
-        segments.append(f'CPT*{cpt}' + '~')
+    if 'icd_codes' in json_obj:
+        if json_obj['icd_codes'] is None:
+            segments.append(f'ICD*NULL' + '~')
+        else:
+            icd = json_obj['icd_codes']
+            segments.append(f'ICD*{icd}' + '~')
+
+    if 'cpt_codes' in json_obj:
+        if json_obj['cpt_codes'] is None:
+            segments.append(f'CPT*NULL' + '~')
+        else:
+            cpt = json_obj['cpt_codes']
+            segments.append(f'CPT*{cpt}' + '~')
+
+    # PA Requests (PA request segments)
+    if "paRequesets" in json_obj:
+        if json_obj["paRequesets"] is None:
+            segments.append(f'SVC*null~')
+            segments.append(f'POS*null~')
+            segments.append(f'DX*null~')
+        else:
+            for pa_request in json_obj["paRequesets"]:
+                if "authType" in pa_request:
+                    if pa_request["authType"] is None:
+                        segments.append(f'SVC*null~')
+                    else:
+                        if "serviceCodeType" in pa_request:
+                            if pa_request["serviceCodeType"] == "cpt":
+                                segments.append(f'SVC*30*CPT*{pa_request["procedureCode"]}~')
+                            elif pa_request["serviceCodeType"] == "icd":
+                                segments.append(f'SVC*30*ICD*{pa_request["procedureCode"]}~')
+                            else:
+                                segments.append(f'SVC*30**~')
+                        else:
+                             segments.append(f'SVC*30**~')
+                        if pa_request["dateOfService"]:
+                            segments.append(f'DTP*291*D8*{pa_request["dateOfService"]}~')
+                        if pa_request["placeOfService"]:
+                            segments.append(f'POS*{pa_request["placeOfService"]}~')
+                        if pa_request["diagnosis"]:
+                            segments.append(f'DX*{pa_request["diagnosis"]}~')
     
     # --- Trailer Segments ---
     segments.append(f'SE*{len(segments)+1}*0001' + '~')
