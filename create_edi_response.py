@@ -11,6 +11,11 @@ def load_config(file_path="custom_edi.config"):
 
 claim_values = load_config("custom_edi.config")    
 
+def check_invalid(obj):
+    if not isinstance(obj, list):
+        return True
+    return any(item is None for item in obj)
+    
 def generate_edi_278_response(json_obj):
     segments = []
     
