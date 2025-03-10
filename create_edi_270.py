@@ -120,19 +120,25 @@ def generate_edi_270(json_obj):
             segments.append(f'DX*null~')
         else:
             for pa_request in json_obj["paRequesets"]:
-                if "serviceCodeType" in pa_request:
-                    if "cptProcedureCode" in pa_request:
-                        segments.append(f'SVC*{pa_request["serviceCodeType"]}*{pa_request["cptProcedureCode"]}~')
+                if "authType" in pa_request:
+                    if pa_request["authType"] is None:
+                        segments.append(f'SVC*null~')
                     else:
-                        segments.append(f'SVC*{pa_request["serviceCodeType"]}*'+'**~')
-                if pa_request["icdProcedureCode"]:
-                    segments.append(f'ICD*{pa_request["icdProcedureCode"]}~')
-                if pa_request["dateOfService"]:
-                    segments.append(f'DTP*291*D8*{pa_request["dateOfService"]}~')
-                if pa_request["placeOfService"]:
-                    segments.append(f'POS*{pa_request["placeOfService"]}~')
-                if pa_request["diagnosis"]:
-                    segments.append(f'DX*{pa_request["diagnosis"]}~')
+                        if "serviceCodeType" in pa_request:
+                            if pa_request["serviceCodeType"] == "cpt":
+                                segments.append(f'SVC*30*CPT*{pa_request["procedureCode"]}~')
+                            elif pa_request["serviceCodeType"] == "icd":
+                                segments.append(f'SVC*30*ICD*{pa_request["procedureCode"]}~')
+                            else:
+                                segments.append(f'SVC*30**~')
+                        else:
+                             segments.append(f'SVC*30**~')
+                        if pa_request["dateOfService"]:
+                            segments.append(f'DTP*291*D8*{pa_request["dateOfService"]}~')
+                        if pa_request["placeOfService"]:
+                            segments.append(f'POS*{pa_request["placeOfService"]}~')
+                        if pa_request["diagnosis"]:
+                            segments.append(f'DX*{pa_request["diagnosis"]}~')
     
     # --- Trailer Segments ---
     segments.append(f'SE*{len(segments)+1}*{st_control}~')
