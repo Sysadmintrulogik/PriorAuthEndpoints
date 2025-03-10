@@ -110,7 +110,7 @@ def read_edi_from_blob(blob_url):
     blob_data = blob_client.download_blob().readall()
     return blob_data.decode('utf-8')
     
-@edi_bp.route('/create_edi', methods=['GET', 'POST'])
+@edi_bp.route('/create_edi_278_new', methods=['GET', 'POST'])
 def create_edi():
     claim_values = load_config("custom_edi.config")
 
