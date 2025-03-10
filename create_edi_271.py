@@ -64,7 +64,7 @@ def generate_edi_271(json_obj):
     segments.append('HL*2*1*21*1' + '~')  # HL for Provider (child of the subscriber)
     
     # --- Member (Subscriber) Information ---
-    member = json_obj['member']
+    member = json_obj["member"]
     segments.append(f'NM1*IL*1*{member["name"]}*****MI*{member["member_id"]}' + '~')
     segments.append(f'N3*{member["address"]}' + '~')
     try:
