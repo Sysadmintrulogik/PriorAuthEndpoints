@@ -82,11 +82,12 @@ def generate_edi_270(json_obj):
     #segments.append(f'HCR*A1*PXC*{provider["auth_number"]}' + '~')#HCR*A1*AUTH0001~
 
     # --- Payer Information ---
-    payer = json_obj['payer']
-    segments.append(f'HL*2*1*21*1' + '~')
-    segments.append(f'NM1*PR*2*{payer["name"]}****PI*{payer["payer_id"]}' + '~')
-    #segments.append(f'N3*{provider["address"]}' + '~')
-    #segments.append(f'PRV*BI*PXC*{provider["taxonomy"]}' + '~')
+    if 'payer' in json_obj:
+        payer = json_obj['payer']
+        segments.append(f'HL*2*1*21*1' + '~')
+        segments.append(f'NM1*PR*2*{payer["name"]}****PI*{payer["payer_id"]}' + '~')
+        #segments.append(f'N3*{provider["address"]}' + '~')
+        #segments.append(f'PRV*BI*PXC*{provider["taxonomy"]}' + '~')
 
     """
     # --- ICD Codes ---
