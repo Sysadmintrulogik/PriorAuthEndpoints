@@ -101,13 +101,15 @@ def generate_edi_270(json_obj):
         if json_obj['icd_codes'] is None:
             segments.append(f'ICD*NULL' + '~')
         else:
-            segments.append(f'ICD*json_obj['icd_codes']' + '~')
+            icd = json_obj['icd_codes']
+            segments.append(f'ICD*{icd}' + '~')
 
     if 'cpt_codes' in json_obj:
         if json_obj['cpt_codes'] is None:
             segments.append(f'CPT*NULL' + '~')
         else:
-            segments.append(f'CPT*json_obj['cpt_codes']' + '~')
+            cpt = json_obj['cpt_codes']
+            segments.append(f'CPT*{cpt}' + '~')
         
     # PA Requests (PA request segments)
     if "paRequesets" in json_obj:
