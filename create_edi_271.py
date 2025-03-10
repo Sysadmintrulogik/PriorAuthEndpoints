@@ -163,6 +163,25 @@ def generate_edi_271(json_obj):
     
     return '\n'.join(segments)
 
+def read_edi_from_blob(blob_url):
+    """Read EDI content from the given blob URL"""
+    config_for_edi = load_config("custom_edi.config")
+    
+    # Create a BlobServiceClient using the connection string
+    CONNECTION_STRING = "".join(config_for_edi["blob_credentials"]["CONNECTION_STRING"])
+    
+    blob_service_client = BlobServiceClient.from_connection_string(CONNECTION_STRING)
+    container_name = config_for_edi["blob_credentials"]["CONTAINER_NAME"]
+    blob_name = os.path.basename(blob_url)  # Extract filename from URL
+    
+    blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
+    
+    if not blob_client.exists():
+        return {"error": "File does not exist in blob storage"}
+    
+    blob_data = blob_client.download_blob().readall()
+    return blob_data.decode('utf-8')
+
 @edi_271_bp.route('/create_edi', methods=['GET', 'POST'])
 def create_edi():
     claim_values = load_config("custom_edi.config")
@@ -170,7 +189,8 @@ def create_edi():
     if not request.form.get('blob_url'):
         return jsonify({"error": "blob_url is required"}), 400
     blob_url = request.form.get('blob_url')
-    edi_content = generate_edi_271(obj)
+    json_object = read_edi_from_blob(blob_url)
+    edi_content = generate_edi_271(json_object)
 
     """
     edi_content = ""
