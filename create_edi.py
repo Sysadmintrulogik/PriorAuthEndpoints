@@ -69,7 +69,8 @@ def generate_edi_278_new(json_obj):
     # PA Requests (PA request segments)
     if "paRequesets" in json_obj:
         for pa_request in json_obj["paRequesets"]:
-            segments.append(f'SVC*{pa_request["serviceCodeType"]}*{pa_request["cptProcedureCode"]}~')
+            if pa_request["serviceCodeType"]:
+                segments.append(f'SVC*{pa_request["serviceCodeType"]}*{pa_request["cptProcedureCode"]}~')
             if pa_request["icdProcedureCode"]:
                 segments.append(f'ICD*{pa_request["icdProcedureCode"]}~')
             if pa_request["dateOfService"]:
